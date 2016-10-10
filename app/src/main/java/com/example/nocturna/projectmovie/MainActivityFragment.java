@@ -8,6 +8,10 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.GridView;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -26,6 +30,8 @@ public class MainActivityFragment extends Fragment {
     public MainActivityFragment() {
         FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
         fetchMoviesTask.execute();
+
+        GridView gridView = (GridView) getActivity().findViewById(R.id.movie_grid);
     }
 
     @Override
@@ -34,11 +40,17 @@ public class MainActivityFragment extends Fragment {
         return inflater.inflate(R.layout.fragment_main, container, false);
     }
 
-    private class FetchMoviesTask extends AsyncTask<Void, Void, Void> {
+    private class FetchMoviesTask extends AsyncTask<Void, Void, String[]> {
         private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
 
+        private String[] getMovieDataFromString(String jsonString) throws JSONException {
+
+            JSONObject movieJson = new JSONObject(jsonString);
+
+        }
+
         @Override
-        protected Void doInBackground(Void... params) {
+        protected String[] doInBackground(Void... params) {
 
             String movieJsonStr;     // Holds the JSON string returned from the connection.
 
@@ -97,10 +109,13 @@ public class MainActivityFragment extends Fragment {
                 // Log.v(LOG_TAG, "Test");
 
             } catch (MalformedURLException e) {
+                // In case the URL is incorrect
                 Log.d(LOG_TAG, "Malformed URL", e);
             } catch (IOException e) {
+                // If unable to connect to the website (e.g. no network connection)
                 Log.d(LOG_TAG, "Unable to connect to TheMovieDB.org", e);
             } catch (Exception e) {
+                // In case of any errors that were missed
                 Log.d(LOG_TAG, "Exception: ", e);
             }
             finally {
@@ -117,9 +132,9 @@ public class MainActivityFragment extends Fragment {
                 }
 
             }
-
-
             return null;
         }
+
+
     }
 }
