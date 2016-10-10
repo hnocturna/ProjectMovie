@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">projectmovie</string>
+    <string name="action_settings">Settings</string>
+
+    <!-- Labels for fragment_main -->
+    <string name="main_title">projectmovie</string>
+    <string name="movie_grid">Movie Grid</string>
+</resources>
