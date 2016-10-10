@@ -10,6 +10,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.GridView;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -43,10 +44,28 @@ public class MainActivityFragment extends Fragment {
     private class FetchMoviesTask extends AsyncTask<Void, Void, String[]> {
         private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
 
+        /*
+         * Method of extracting the data required from the JSON String returned by the
+         * FetchMoviesTask and returning it as a list of string of URLs to get the movie posters
+         * from
+         */
         private String[] getMovieDataFromString(String jsonString) throws JSONException {
+            // List of items that need to be extracted
+
+            final String MOVIE_RESULTS = "results";
+            final String POSTER_PATH = "poster_path";
 
             JSONObject movieJson = new JSONObject(jsonString);
+            JSONArray movieArray = movieJson.getJSONArray(MOVIE_RESULTS);
 
+            String[] posterArray = new String[movieArray.length()];
+
+            for (int i = 0; i < movieArray.length(); i++) {
+                String poster = movieArray.getJSONObject(i).getString(POSTER_PATH);
+                posterArray[i] = poster;
+            }
+
+            return posterArray;
         }
 
         @Override
@@ -135,6 +154,20 @@ public class MainActivityFragment extends Fragment {
             return null;
         }
 
+        @Override
+        protected String[] onPostExecute(String[] strings) {
+            String[] posterArray = new String[strings.length];
+            final String BASE_URL = "http://image.tmdb.org/t/p/w185";
 
+            if (strings == null) {
+                return null;
+                Log.d(LOG_TAG, "No poster URLs extracted from JSON");
+            }
+            for (int i = 0; i < strings.length; i++) {
+                posterArray[i] = BASE_URL + "/" + strings[i];
+            }
+
+            return posterArray;
+        }
     }
 }
