@@ -1,29 +1,16 @@
 package com.example.nocturna.projectmovie;
 
-import android.app.ActionBar;
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.Movie;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AbsListView;
-import android.widget.Adapter;
 import android.widget.BaseAdapter;
-import android.widget.GridLayout;
-import android.widget.GridView;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
-
-import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import static android.R.id.list;
 
 /**
  * Created by Nocturna on 10/9/2016.
@@ -31,14 +18,14 @@ import static android.R.id.list;
 
 public class MoviePosterAdapter extends BaseAdapter {
     String LOG_TAG = MoviePosterAdapter.class.getSimpleName();
-    List<String> urlList;
+    List<Movie> movieList;
     Context mContext;
 
-    public MoviePosterAdapter(Context context, String[] urlArray) {
-        if (urlArray != null) {
-            this.urlList = new ArrayList<>(Arrays.asList(urlArray));
+    public MoviePosterAdapter(Context context, Movie[] movieArray) {
+        if (movieArray != null) {
+            this.movieList = new ArrayList<>(Arrays.asList(movieArray));
         } else {
-            this.urlList = new ArrayList<>();
+            this.movieList = new ArrayList<>();
         }
         mContext = context;
         LayoutInflater inflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -47,6 +34,8 @@ public class MoviePosterAdapter extends BaseAdapter {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         ImageView imageView;
+        Movie movie = movieList.get(position);
+
         Log.v(LOG_TAG, "TEST");
         if (convertView == null) {
             // LayoutInflater inflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -57,8 +46,8 @@ public class MoviePosterAdapter extends BaseAdapter {
         } else {
             imageView = (ImageView) convertView;
         }
-        Picasso.with(mContext).load(urlList.get(position)).into(imageView);
-        Log.v(LOG_TAG, "Loading poster URL: " + urlList.get(position));
+        imageView.setImageBitmap(movie.getPoster());
+        Log.v(LOG_TAG, "Loading poster URL: " + movieList.get(position));
         return imageView;
     }
 
@@ -69,21 +58,21 @@ public class MoviePosterAdapter extends BaseAdapter {
 
     @Override
     public Object getItem(int position) {
-        return urlList.get(position);
+        return movieList.get(position);
     }
 
     @Override
     public int getCount() {
-        return urlList.size();
+        return movieList.size();
     }
 
     public void clear() {
-        urlList = new ArrayList<>();
+        movieList = new ArrayList<>();
         notifyDataSetChanged();
     }
 
-    public void add(String url) {
-        urlList.add(url);
+    public void add(Movie movie) {
+        movieList.add(movie);
         notifyDataSetChanged();
         // Log.v(LOG_TAG, "Poster URL added: " + url);
     }

@@ -1,5 +1,7 @@
 package com.example.nocturna.projectmovie;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v4.app.Fragment;
@@ -45,7 +47,7 @@ public class MainActivityFragment extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
         gridView = (GridView) rootView.findViewById(R.id.movie_grid);
-        moviePosterAdapter = new MoviePosterAdapter(getActivity(), new String[0]);
+        moviePosterAdapter = new MoviePosterAdapter(getActivity(), new Movie[0]);
         gridView.setAdapter(moviePosterAdapter);
 
         FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
@@ -54,7 +56,7 @@ public class MainActivityFragment extends Fragment {
         return rootView;
     }
 
-    private class FetchMoviesTask extends AsyncTask<Void, Void, String[]> {
+    private class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
         private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
 
         /*
@@ -62,27 +64,45 @@ public class MainActivityFragment extends Fragment {
          * FetchMoviesTask and returning it as a list of string of URLs to get the movie posters
          * from
          */
-        private String[] getMovieDataFromString(String jsonString) throws JSONException {
+        private Movie[] getMovieDataFromString(String jsonString) throws JSONException {
             // List of items that need to be extracted
 
-            final String MOVIE_RESULTS = "results";
-            final String POSTER_PATH = "poster_path";
+            final String TMD_MOVIE_RESULTS = "results";
+            final String TMD_POSTER_PATH = "poster_path";
+            final String TMD_TITLE = "original_title";
+            final String TMD_OVERVIEW = "overview";
+            final String TMD_RATING = "vote_average";
+            final String TMD_RELEASE_DATE = "release_date";
+            final String TMD_BACKDROP_PATH = "backdrop_path";
+
+            final String TMD_POSTER_BASE = "http://image.tmdb.org/t/p/w342";
+            final String TMD_BACKDROP_BASE = "https://image.tmdb.org/t/p/w780";
 
             JSONObject movieJson = new JSONObject(jsonString);
-            JSONArray movieArray = movieJson.getJSONArray(MOVIE_RESULTS);
+            JSONArray movieJsonArray = movieJson.getJSONArray(TMD_MOVIE_RESULTS);
 
-            String[] posterArray = new String[movieArray.length()];
+            Movie[] movieArray = new Movie[movieJsonArray.length()];
 
-            for (int i = 0; i < movieArray.length(); i++) {
-                String poster = movieArray.getJSONObject(i).getString(POSTER_PATH);
-                posterArray[i] = poster;
+            for (int i = 0; i < movieJsonArray.length(); i++) {
+                JSONObject movieJsonObject = movieJsonArray.getJSONObject(i);
+                String title = movieJsonObject.getString(TMD_TITLE);
+                String posterPath = movieJsonObject.getString(TMD_POSTER_PATH);
+                String overview = movieJsonObject.getString(TMD_OVERVIEW);
+                String rating = movieJsonObject.getString(TMD_RATING);
+                String releaseDate = movieJsonObject.getString(TMD_RELEASE_DATE);
+                String backdropPath = movieJsonObject.getString(TMD_BACKDROP_PATH);
+
+                posterPath = TMD_POSTER_BASE + posterPath;
+                backdropPath = TMD_BACKDROP_BASE + backdropPath;
+
+                movieArray[i] = new Movie(title, overview, releaseDate, rating, posterPath, backdropPath);
             }
 
-            return posterArray;
+            return movieArray;
         }
 
         @Override
-        protected String[] doInBackground(Void... params) {
+        protected Movie[] doInBackground(Void... params) {
 
             String movieJsonStr;     // Holds the JSON string returned from the connection.
 
@@ -137,7 +157,35 @@ public class MainActivityFragment extends Fragment {
                     return null;
                 }
                 movieJsonStr = buffer.toString();
-                return getMovieDataFromString(movieJsonStr);
+
+                // Store the retrieved movies as an array so the images can also be downloaded in
+                // the background. This prevents issues from Picasso trying to load images slower
+                // than they disappear from view as you scroll.
+                Movie[] movieArray = getMovieDataFromString(movieJsonStr);
+
+                for (Movie movie : movieArray) {
+                    // Defined outside of try block so it can be closed in the finally block
+                    HttpURLConnection posterConnection = null;
+
+                    try {
+                        // Open a connection to the poster image.
+                        URL posterUrl = new URL(movie.getPosterPath());
+                        posterConnection = (HttpURLConnection) posterUrl.openConnection();
+                        posterConnection.setDoInput(true);
+                        posterConnection.connect();
+
+                        // Convert to an input stream and utilize BitmapFactor to output a bitmap
+                        InputStream bitmapStream = posterConnection.getInputStream();
+                        Bitmap poster = BitmapFactory.decodeStream(bitmapStream);
+
+                        movie.addPoster(poster);
+                    } finally {
+                        if (posterConnection != null) {
+                            posterConnection.disconnect();
+                        }
+                    }
+                }
+                return movieArray;
 
                 // Log.v(LOG_TAG, movieJsonStr);
                 // Log.v(LOG_TAG, "Test");
@@ -171,26 +219,14 @@ public class MainActivityFragment extends Fragment {
         }
 
         @Override
-        protected void onPostExecute(String[] strings) {
-            if (strings == null) {
-                Log.d(LOG_TAG, "No poster URLs extracted from JSON");
+        protected void onPostExecute(Movie[] moviesArray) {
+            if (moviesArray == null) {
+                Log.d(LOG_TAG, "No movies extracted from JSON");
                 return;
             }
-
-            String[] posterArray = new String[strings.length];
-            final String BASE_URL = "http://image.tmdb.org/t/p/w342";
-
-            for (int i = 0; i < strings.length; i++) {
-                posterArray[i] = BASE_URL + strings[i];
-                // Log.v(LOG_TAG, posterArray[i].toString());
+            for (Movie movie : moviesArray) {
+                moviePosterAdapter.add(movie);
             }
-
-            // moviePosterAdapter.clear();
-
-            for (String posterUrl : posterArray) {
-                moviePosterAdapter.add(posterUrl);
-            }
-            gridView.setAdapter(moviePosterAdapter);
             return;
         }
     }

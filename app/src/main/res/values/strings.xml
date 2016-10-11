@@ -5,4 +5,5 @@
     <!-- Labels for fragment_main -->
     <string name="main_title">projectmovie</string>
     <string name="movie_grid">Movie Grid</string>
+    <string name="title_activity_details">DetailsActivity</string>
 </resources>
