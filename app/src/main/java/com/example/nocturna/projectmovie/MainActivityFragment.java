@@ -9,6 +9,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.GridView;
+import android.widget.ImageView;
+
+import com.squareup.picasso.Picasso;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -22,23 +25,33 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A placeholder fragment containing a simple view.
  */
 public class MainActivityFragment extends Fragment {
+    MoviePosterAdapter moviePosterAdapter;
+    GridView gridView;
 
     public MainActivityFragment() {
-        FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
-        fetchMoviesTask.execute();
 
-        GridView gridView = (GridView) getActivity().findViewById(R.id.movie_grid);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_main, container, false);
+        View rootView = inflater.inflate(R.layout.fragment_main, container, false);
+
+        gridView = (GridView) rootView.findViewById(R.id.movie_grid);
+        moviePosterAdapter = new MoviePosterAdapter(getActivity(), new String[0]);
+        gridView.setAdapter(moviePosterAdapter);
+
+        FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
+        fetchMoviesTask.execute();
+
+        return rootView;
     }
 
     private class FetchMoviesTask extends AsyncTask<Void, Void, String[]> {
@@ -124,7 +137,9 @@ public class MainActivityFragment extends Fragment {
                     return null;
                 }
                 movieJsonStr = buffer.toString();
-                Log.v(LOG_TAG, movieJsonStr);
+                return getMovieDataFromString(movieJsonStr);
+
+                // Log.v(LOG_TAG, movieJsonStr);
                 // Log.v(LOG_TAG, "Test");
 
             } catch (MalformedURLException e) {
@@ -151,23 +166,32 @@ public class MainActivityFragment extends Fragment {
                 }
 
             }
+
             return null;
         }
 
         @Override
-        protected String[] onPostExecute(String[] strings) {
-            String[] posterArray = new String[strings.length];
-            final String BASE_URL = "http://image.tmdb.org/t/p/w185";
-
+        protected void onPostExecute(String[] strings) {
             if (strings == null) {
-                return null;
                 Log.d(LOG_TAG, "No poster URLs extracted from JSON");
-            }
-            for (int i = 0; i < strings.length; i++) {
-                posterArray[i] = BASE_URL + "/" + strings[i];
+                return;
             }
 
-            return posterArray;
+            String[] posterArray = new String[strings.length];
+            final String BASE_URL = "http://image.tmdb.org/t/p/w342";
+
+            for (int i = 0; i < strings.length; i++) {
+                posterArray[i] = BASE_URL + strings[i];
+                // Log.v(LOG_TAG, posterArray[i].toString());
+            }
+
+            // moviePosterAdapter.clear();
+
+            for (String posterUrl : posterArray) {
+                moviePosterAdapter.add(posterUrl);
+            }
+            gridView.setAdapter(moviePosterAdapter);
+            return;
         }
     }
 }
