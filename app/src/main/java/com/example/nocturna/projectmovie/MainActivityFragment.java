@@ -36,7 +36,6 @@ import java.util.List;
  * A placeholder fragment containing a simple view.
  */
 public class MainActivityFragment extends Fragment {
-    public static final String EXTRA_MOVIE = "movie";
     MoviePosterAdapter moviePosterAdapter;
     Movie[] movieArray;
 
@@ -50,21 +49,22 @@ public class MainActivityFragment extends Fragment {
         // First retrieve the rootView of the fragment so that other views can be selected
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
-        // Select the gridview and attach the MoviePosterAdapter custom made for the posters
+        // Select the GridView and attach the MoviePosterAdapter custom made for the posters
         GridView gridView = (GridView) rootView.findViewById(R.id.movie_grid);
         moviePosterAdapter = new MoviePosterAdapter(getActivity(), new Movie[0]);
         gridView.setAdapter(moviePosterAdapter);
 
         // Set onClickItemListener so clicking a poster will lead to DetailsActivity
-        // TODO: Attach the movie as a parceable to the intent.
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                // Start the DetailsActivity by passing the selected Movie object as an Extra in the
+                // Intent
                 Movie selectedMovie = movieArray[position];
 
-                Intent intent = new Intent(getActivity(), DetailsActivity.class);
-                intent.putExtra(EXTRA_MOVIE, selectedMovie);
-                };
+                Intent intent = new Intent(getActivity(), DetailsActivity.class)
+                    .putExtra(MainActivity.EXTRA_MOVIE, selectedMovie);
+                startActivity(intent);
             }
         });
 
@@ -85,7 +85,6 @@ public class MainActivityFragment extends Fragment {
          */
         private Movie[] getMovieDataFromString(String jsonString) throws JSONException {
             // List of items that need to be extracted
-
             final String TMD_MOVIE_RESULTS = "results";
             final String TMD_POSTER_PATH = "poster_path";
             final String TMD_TITLE = "original_title";
@@ -103,6 +102,8 @@ public class MainActivityFragment extends Fragment {
             Movie[] movieArray = new Movie[movieJsonArray.length()];
 
             for (int i = 0; i < movieJsonArray.length(); i++) {
+                // Create a new Movie object and populate it with details from the JSON string
+                // and add it to an array of Movies to pass back to the doInBackground
                 JSONObject movieJsonObject = movieJsonArray.getJSONObject(i);
                 String title = movieJsonObject.getString(TMD_TITLE);
                 String posterPath = movieJsonObject.getString(TMD_POSTER_PATH);
@@ -111,6 +112,8 @@ public class MainActivityFragment extends Fragment {
                 String releaseDate = movieJsonObject.getString(TMD_RELEASE_DATE);
                 String backdropPath = movieJsonObject.getString(TMD_BACKDROP_PATH);
 
+                // Prepend the base URL for the poster and the backdrop before adding it to the
+                // Movie object
                 posterPath = TMD_POSTER_BASE + posterPath;
                 backdropPath = TMD_BACKDROP_BASE + backdropPath;
 
@@ -148,7 +151,7 @@ public class MainActivityFragment extends Fragment {
                 urlConnection.setRequestMethod("GET");
                 urlConnection.connect();
 
-                Log.v(LOG_TAG, "Built URL: " + url.toString());
+                // Log.v(LOG_TAG, "Built URL: " + url.toString());
 
                 // Get the input stream from the website and read the contents, ensuring that
                 // it didn't return a blank stream.
@@ -239,6 +242,7 @@ public class MainActivityFragment extends Fragment {
 
         @Override
         protected void onPostExecute(Movie[] moviesArray) {
+            // Add the movies to the MoviePosterAdapter attached to the GridView
             if (moviesArray == null) {
                 Log.d(LOG_TAG, "No movies extracted from JSON");
                 return;

@@ -93,7 +93,8 @@ public class Movie implements Parcelable {
         this.releaseDate = in.readString();
         this.userRating = in.readString();
         this.backdropPath = in.readString();
-        this.poster = (Bitmap) in.readValue(Bitmap.class.getClassLoader());
+        this.posterPath = in.readString();
+        // this.poster = (Bitmap) in.readValue(Bitmap.class.getClassLoader());
     }
 
     @Override
@@ -103,7 +104,8 @@ public class Movie implements Parcelable {
         dest.writeString(releaseDate);
         dest.writeString(userRating);
         dest.writeString(backdropPath);
-        dest.writeValue(poster);
+        dest.writeString(posterPath);
+        // dest.writeValue(poster);
     }
 
     public static final Parcelable.Creator<Movie> CREATOR = new Parcelable.Creator<Movie>() {

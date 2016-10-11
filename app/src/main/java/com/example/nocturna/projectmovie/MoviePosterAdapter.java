@@ -14,6 +14,8 @@ import java.util.List;
 
 /**
  * Created by Nocturna on 10/9/2016.
+ * Takes Movie objects and extracts the bitmap from the object and passes it to an ImageView that is
+ * then displayed in the GridView of the MainActivity
  */
 
 public class MoviePosterAdapter extends BaseAdapter {
@@ -22,13 +24,13 @@ public class MoviePosterAdapter extends BaseAdapter {
     Context mContext;
 
     public MoviePosterAdapter(Context context, Movie[] movieArray) {
+        // Creates a new ArrayList in case we pass in null for some debugging reason
         if (movieArray != null) {
             this.movieList = new ArrayList<>(Arrays.asList(movieArray));
         } else {
             this.movieList = new ArrayList<>();
         }
         mContext = context;
-        LayoutInflater inflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     }
 
     @Override
@@ -36,18 +38,15 @@ public class MoviePosterAdapter extends BaseAdapter {
         ImageView imageView;
         Movie movie = movieList.get(position);
 
-        Log.v(LOG_TAG, "TEST");
         if (convertView == null) {
-            // LayoutInflater inflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            // convertView = inflater.inflate(R.layout.movies_item, parent, false);
+            // Creates a new ImageView for the item if it is the first time loading the view
             imageView = new ImageView(mContext);
-            // imageView.setLayoutParams(new GridView.LayoutParams(GridLayout.LayoutParams.MATCH_PARENT, GridLayout.LayoutParams.MATCH_PARENT));
-
         } else {
             imageView = (ImageView) convertView;
         }
+        // Set the poster bitmap to the ImageView
         imageView.setImageBitmap(movie.getPoster());
-        Log.v(LOG_TAG, "Loading poster URL: " + movieList.get(position));
+        // Log.v(LOG_TAG, "Loading poster URL: " + movieList.get(position));
         return imageView;
     }
 
