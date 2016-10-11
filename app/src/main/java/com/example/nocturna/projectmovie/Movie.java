@@ -1,12 +1,14 @@
 package com.example.nocturna.projectmovie;
 
 import android.graphics.Bitmap;
+import android.os.Parcel;
+import android.os.Parcelable;
 
 /**
  * Created by hnoct on 10/10/2016.
  */
 
-public class Movie {
+public class Movie implements Parcelable {
     String title;
     String backdropPath;
     String userRating;
@@ -83,5 +85,40 @@ public class Movie {
 
     public Bitmap getBackdrop() {
         return backdrop;
+    }
+
+    public Movie(Parcel in) {
+        this.title = in.readString();
+        this.overview = in.readString();
+        this.releaseDate = in.readString();
+        this.userRating = in.readString();
+        this.backdropPath = in.readString();
+        this.poster = (Bitmap) in.readValue(Bitmap.class.getClassLoader());
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(title);
+        dest.writeString(overview);
+        dest.writeString(releaseDate);
+        dest.writeString(userRating);
+        dest.writeString(backdropPath);
+        dest.writeValue(poster);
+    }
+
+    public static final Parcelable.Creator<Movie> CREATOR = new Parcelable.Creator<Movie>() {
+        public Movie createFromParcel(Parcel in) {
+            return new Movie(in);
+        }
+
+        @Override
+        public Movie[] newArray(int size) {
+            return new Movie[size];
+        }
+    };
+
+    @Override
+    public int describeContents() {
+        return 0;
     }
 }

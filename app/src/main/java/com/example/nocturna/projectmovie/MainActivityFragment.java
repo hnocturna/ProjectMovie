@@ -1,5 +1,6 @@
 package com.example.nocturna.projectmovie;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -10,6 +11,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.GridView;
 import android.widget.ImageView;
 
@@ -34,8 +36,9 @@ import java.util.List;
  * A placeholder fragment containing a simple view.
  */
 public class MainActivityFragment extends Fragment {
+    public static final String EXTRA_MOVIE = "movie";
     MoviePosterAdapter moviePosterAdapter;
-    GridView gridView;
+    Movie[] movieArray;
 
     public MainActivityFragment() {
 
@@ -44,12 +47,28 @@ public class MainActivityFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+        // First retrieve the rootView of the fragment so that other views can be selected
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
-        gridView = (GridView) rootView.findViewById(R.id.movie_grid);
+        // Select the gridview and attach the MoviePosterAdapter custom made for the posters
+        GridView gridView = (GridView) rootView.findViewById(R.id.movie_grid);
         moviePosterAdapter = new MoviePosterAdapter(getActivity(), new Movie[0]);
         gridView.setAdapter(moviePosterAdapter);
 
+        // Set onClickItemListener so clicking a poster will lead to DetailsActivity
+        // TODO: Attach the movie as a parceable to the intent.
+        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Movie selectedMovie = movieArray[position];
+
+                Intent intent = new Intent(getActivity(), DetailsActivity.class);
+                intent.putExtra(EXTRA_MOVIE, selectedMovie);
+                };
+            }
+        });
+
+        // Run the AsyncTask to download and parse the movie data from TheMovieDB.org
         FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
         fetchMoviesTask.execute();
 
@@ -161,9 +180,9 @@ public class MainActivityFragment extends Fragment {
                 // Store the retrieved movies as an array so the images can also be downloaded in
                 // the background. This prevents issues from Picasso trying to load images slower
                 // than they disappear from view as you scroll.
-                Movie[] movieArray = getMovieDataFromString(movieJsonStr);
+                Movie[] movieArrayFromJson = getMovieDataFromString(movieJsonStr);
 
-                for (Movie movie : movieArray) {
+                for (Movie movie : movieArrayFromJson) {
                     // Defined outside of try block so it can be closed in the finally block
                     HttpURLConnection posterConnection = null;
 
@@ -185,7 +204,7 @@ public class MainActivityFragment extends Fragment {
                         }
                     }
                 }
-                return movieArray;
+                return  movieArray = movieArrayFromJson;
 
                 // Log.v(LOG_TAG, movieJsonStr);
                 // Log.v(LOG_TAG, "Test");
