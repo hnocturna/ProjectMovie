@@ -46,6 +46,7 @@ public class MoviePosterAdapter extends BaseAdapter {
         }
         // Set the poster bitmap to the ImageView
         imageView.setImageBitmap(movie.getPoster());
+        imageView.setPadding(0,8,0,8);
         // Log.v(LOG_TAG, "Loading poster URL: " + movieList.get(position));
         return imageView;
     }

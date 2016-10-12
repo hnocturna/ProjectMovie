@@ -1,19 +1,31 @@
 package com.example.nocturna.projectmovie;
 
+import android.app.Dialog;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
+import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 
 import com.squareup.picasso.Picasso;
 
@@ -36,11 +48,90 @@ import java.util.List;
  * A placeholder fragment containing a simple view.
  */
 public class MainActivityFragment extends Fragment {
+    String LOG_TAG = MainActivityFragment.class.getSimpleName();
     MoviePosterAdapter moviePosterAdapter;
     Movie[] movieArray;
-
     public MainActivityFragment() {
 
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        inflater.inflate(R.menu.menu_main_fragment, menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+
+        if (id == R.id.action_sort) {
+            String sortMode = PreferenceManager.getDefaultSharedPreferences(getActivity())
+                    .getString(
+                            getString(R.string.pref_sort_key),
+                            getString(R.string.pref_sort_popular)
+                    );
+
+            final AlertDialog dialog = new AlertDialog.Builder(getActivity())
+                    .setTitle(getString(R.string.sort_dialog_title))
+                    .setView(R.layout.sort_dialog)
+                    .create();
+//            final Dialog dialog = new Dialog(getActivity());
+//            dialog.setTitle(getString(R.string.sort_dialog_title));
+//            dialog.requestWindowFeature(Window.FEATURE_CUSTOM_TITLE);
+//            dialog.setContentView(R.layout.sort_dialog);
+            dialog.show();
+
+            final RadioGroup sortRadioGroup = (RadioGroup) dialog.findViewById(R.id.sort_dialog_radiogroup);
+            final RadioButton popularRadio = (RadioButton) dialog.findViewById(R.id.radio_popular);
+            final RadioButton topRadio = (RadioButton) dialog.findViewById(R.id.radio_top);
+            final Button sortButton = (Button) dialog.findViewById(R.id.sort_dialog_button);
+
+            Log.v(LOG_TAG, "Sort mode: " + sortMode);
+            if (sortMode.equals(getString(R.string.pref_sort_popular)) || sortMode == null) {
+                sortRadioGroup.check(R.id.radio_popular);
+            } else if (sortMode.equals(getString(R.string.pref_sort_top))) {
+                sortRadioGroup.check(R.id.radio_top);
+            }
+
+            if (sortRadioGroup.getCheckedRadioButtonId() == -1) {
+                Log.v(LOG_TAG, "STUPID PIECE OF SHIT");
+            }
+
+            sortButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    SharedPreferences.Editor editor = PreferenceManager
+                            .getDefaultSharedPreferences(getActivity()).edit();
+                    if (sortRadioGroup.getCheckedRadioButtonId() == R.id.radio_popular) {
+                        editor.putString(
+                                getString(R.string.pref_sort_key),
+                                getString(R.string.pref_sort_popular)
+                        );
+
+                    } else if (sortRadioGroup.getCheckedRadioButtonId() == R.id.radio_top) {
+                        editor.putString(
+                                getString(R.string.pref_sort_key),
+                                getString(R.string.pref_sort_top)
+                        );
+                    }
+                    editor.commit();
+
+                    FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
+                    fetchMoviesTask.execute();
+
+                    dialog.dismiss();
+                }
+            });
+
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -69,6 +160,12 @@ public class MainActivityFragment extends Fragment {
         });
 
         // Run the AsyncTask to download and parse the movie data from TheMovieDB.org
+        String sortMode = PreferenceManager.getDefaultSharedPreferences(getActivity())
+                .getString(
+                        getString(R.string.pref_sort_key),
+                        getString(R.string.pref_sort_popular)
+                );
+
         FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
         fetchMoviesTask.execute();
 
@@ -125,6 +222,9 @@ public class MainActivityFragment extends Fragment {
 
         @Override
         protected Movie[] doInBackground(Void... params) {
+            if (params == null) {
+                return null;
+            }
 
             String movieJsonStr;     // Holds the JSON string returned from the connection.
 
@@ -135,13 +235,21 @@ public class MainActivityFragment extends Fragment {
 
             try {
                 // Build the URL using a base Uri and appending on additional parameters
-                String baseUri = "http://api.themoviedb.org/3/movie";
+                final String baseUri = "http://api.themoviedb.org/3/movie";
                 final String API_PARAM = "api_key";
                 final String API_KEY = "b1f582365e9ca840bbf384a03c4c37cd";
-                String sortMethod = "popular";
+
+                // Get the user-preferred sort mode from preferences
+                String sortMode = PreferenceManager.getDefaultSharedPreferences(getActivity())
+                        .getString(
+                                getString(R.string.pref_sort_key),
+                                getString(R.string.pref_sort_popular)
+                        );
+
+                Log.v(LOG_TAG, "Downloading movies. Sorting by: " + sortMode);
 
                 Uri builtUri = Uri.parse(baseUri).buildUpon()
-                        .appendPath(sortMethod)
+                        .appendPath(sortMode)
                         .appendQueryParameter(API_PARAM, API_KEY)
                         .build();
 
@@ -247,6 +355,8 @@ public class MainActivityFragment extends Fragment {
                 Log.d(LOG_TAG, "No movies extracted from JSON");
                 return;
             }
+            moviePosterAdapter.clear();
+
             for (Movie movie : moviesArray) {
                 moviePosterAdapter.add(movie);
             }

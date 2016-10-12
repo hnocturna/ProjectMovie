@@ -7,4 +7,20 @@
     <string name="movie_grid">Movie Grid</string>
     <string name="title_activity_details">DetailsActivity</string>
     <string name="title_activity_main2">Main2Activity</string>
+
+    <!-- Labels for settings -->
+    <string name="action_sort">Sort</string>
+    <string name="sort_dialog_title">Sort mode</string>
+    <string name="sort_popular">Most Popular</string>
+    <string name="sort_top">Highest Rated</string>
+
+    <!-- Labels for sort dialog -->
+    <string name="radio_popular">Most Popular</string>
+    <string name="radio_top">Highest Rated</string>
+    <string name="sort_text">Sort</string>
+
+    <!-- Labels for user prefernces -->
+    <string name="pref_sort_key">Sorting Mode</string>
+    <string name="pref_sort_popular">popular</string>
+    <string name="pref_sort_top">top_rated</string>
 </resources>

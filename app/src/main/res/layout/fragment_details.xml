@@ -15,45 +15,104 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"  -->
 
-    <ImageView
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/detail_backdrop_image"
-        />
+        android:id="@+id/detail_scroll_view"
+        android:overScrollMode="always"
+        >
 
-    <ImageView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/poster_image"
-        android:layout_alignParentRight="true"
-        android:layout_marginRight="60dp"
-        android:layout_alignBottom="@id/detail_backdrop_image"
-        android:layout_marginTop="60dp"
-        />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            >
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_alignBottom="@id/detail_backdrop_image"
-        android:id="@+id/detail_title_text"
-        android:text="Layout Text"
-        />
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scaleType="centerCrop"
+                android:adjustViewBounds="true"
+                android:padding="10dp"
+                android:id="@+id/detail_backdrop_image"
+                />
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/detail_overview_text"
-        android:layout_below="@id/detail_backdrop_image"
-        />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                >
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:id="@+id/rating_text"
-        />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_horizontal"
+                    >
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical"
+                        android:gravity="center_vertical"
+                        >
+
+                        <TextView
+                            android:layout_width="200dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginLeft="10dp"
+                            android:paddingRight="10dp"
+                            android:id="@+id/detail_title_text"
+                            android:textColor="#FFFFFF"
+                            android:textSize="24sp"
+                            />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:id="@+id/detail_release_text"
+                            android:layout_marginTop="5dp"
+                            android:layout_marginLeft="10dp"
+                            android:textColor="#FFFFFF"
+                            />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="5dp"
+                            android:layout_marginLeft="10dp"
+                            android:textColor="#FFFFFF"
+                            android:id="@+id/detail_rating_text"
+                            />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/poster_image"
+                        android:layout_alignParentRight="true"
+                        android:layout_marginRight="10dp"
+                        android:layout_below="@id/detail_backdrop_image"
+                        android:layout_marginTop="10dp"
+                        />
+
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/detail_overview_text"
+                    android:textColor="#FFFFFF"
+                    android:padding="15dp"
+                    android:layout_marginTop="10dp"
+                    />
+
+            </LinearLayout>
 
 
+
+        </LinearLayout>
+
+    </ScrollView>
 
 </RelativeLayout>
