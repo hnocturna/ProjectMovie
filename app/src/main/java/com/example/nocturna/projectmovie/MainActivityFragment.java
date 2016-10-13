@@ -1,6 +1,5 @@
 package com.example.nocturna.projectmovie;
 
-import android.app.Dialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -8,7 +7,6 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.preference.PreferenceManager;
-import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
@@ -19,11 +17,9 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.GridView;
-import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 
@@ -40,9 +36,6 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLConnection;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * A placeholder fragment containing a simple view.
@@ -57,13 +50,19 @@ public class MainActivityFragment extends Fragment {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
+        super.onCreate(savedInstanceState);
+
     }
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        menu.clear();
         inflater.inflate(R.menu.menu_main_fragment, menu);
+        MenuItem item = menu.findItem(R.id.action_sort);
+        item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        Log.v(LOG_TAG, "TEST");
     }
 
     @Override
@@ -99,32 +98,43 @@ public class MainActivityFragment extends Fragment {
                 sortRadioGroup.check(R.id.radio_top);
             }
 
-            if (sortRadioGroup.getCheckedRadioButtonId() == -1) {
-                Log.v(LOG_TAG, "STUPID PIECE OF SHIT");
-            }
-
             sortButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    String sortMode = PreferenceManager.getDefaultSharedPreferences(getActivity())
+                            .getString(
+                                    getString(R.string.pref_sort_key),
+                                    getString(R.string.pref_sort_popular)
+                            );
                     SharedPreferences.Editor editor = PreferenceManager
                             .getDefaultSharedPreferences(getActivity()).edit();
-                    if (sortRadioGroup.getCheckedRadioButtonId() == R.id.radio_popular) {
+                    if (sortRadioGroup.getCheckedRadioButtonId() == R.id.radio_popular &&
+                            sortMode == getString(R.string.pref_sort_popular)) {
+                        dialog.dismiss();
+                    } else if (sortRadioGroup.getCheckedRadioButtonId() == R.id.radio_top &&
+                            sortMode == getString(R.string.pref_sort_top)) {
+
+                        dialog.dismiss();
+                    } else if (sortRadioGroup.getCheckedRadioButtonId() == R.id.radio_popular) {
                         editor.putString(
                                 getString(R.string.pref_sort_key),
                                 getString(R.string.pref_sort_popular)
                         );
+                        editor.commit();
+
+                        FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
+                        fetchMoviesTask.execute();
 
                     } else if (sortRadioGroup.getCheckedRadioButtonId() == R.id.radio_top) {
                         editor.putString(
                                 getString(R.string.pref_sort_key),
                                 getString(R.string.pref_sort_top)
                         );
+                        editor.commit();
+
+                        FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
+                        fetchMoviesTask.execute();
                     }
-                    editor.commit();
-
-                    FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
-                    fetchMoviesTask.execute();
-
                     dialog.dismiss();
                 }
             });
@@ -173,6 +183,12 @@ public class MainActivityFragment extends Fragment {
     }
 
     private class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            moviePosterAdapter.clear();
+        }
+
         private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
 
         /*
