@@ -1,4 +1,4 @@
-package com.example.nocturna.projectmovie;
+package com.example.nocturna.projectmovie.app;
 
 import android.app.Dialog;
 import android.content.SharedPreferences;
@@ -14,6 +14,8 @@ import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+
+import com.example.nocturna.projectmovie.R;
 
 public class MainActivity extends AppCompatActivity {
     public static final String EXTRA_MOVIE = "movie";

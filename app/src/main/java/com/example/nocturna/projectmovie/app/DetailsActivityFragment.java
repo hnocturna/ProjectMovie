@@ -1,4 +1,4 @@
-package com.example.nocturna.projectmovie;
+package com.example.nocturna.projectmovie.app;
 
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -6,7 +6,6 @@ import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
-import android.support.v4.widget.ScrollerCompat;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,6 +13,8 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
+
+import com.example.nocturna.projectmovie.R;
 
 import java.io.IOException;
 import java.io.InputStream;

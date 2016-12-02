@@ -1,8 +1,6 @@
-package com.example.nocturna.projectmovie;
+package com.example.nocturna.projectmovie.app;
 
 import android.content.Context;
-import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;

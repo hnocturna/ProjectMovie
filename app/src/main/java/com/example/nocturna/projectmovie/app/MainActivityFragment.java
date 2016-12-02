@@ -1,4 +1,4 @@
-package com.example.nocturna.projectmovie;
+package com.example.nocturna.projectmovie.app;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -23,7 +23,7 @@ import android.widget.GridView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 
-import com.squareup.picasso.Picasso;
+import com.example.nocturna.projectmovie.R;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -109,10 +109,10 @@ public class MainActivityFragment extends Fragment {
                     SharedPreferences.Editor editor = PreferenceManager
                             .getDefaultSharedPreferences(getActivity()).edit();
                     if (sortRadioGroup.getCheckedRadioButtonId() == R.id.radio_popular &&
-                            sortMode == getString(R.string.pref_sort_popular)) {
+                            sortMode.equals(getString(R.string.pref_sort_popular))) {
                         dialog.dismiss();
                     } else if (sortRadioGroup.getCheckedRadioButtonId() == R.id.radio_top &&
-                            sortMode == getString(R.string.pref_sort_top)) {
+                            sortMode.equals(getString(R.string.pref_sort_top))) {
 
                         dialog.dismiss();
                     } else if (sortRadioGroup.getCheckedRadioButtonId() == R.id.radio_popular) {
@@ -298,7 +298,7 @@ public class MainActivityFragment extends Fragment {
                 }
 
                 // Convert the buffer to a String that can be converted to a JSON Object
-                if (buffer == null) {
+                if (buffer.length() == 0) {
                     // Nothing has been read, so nothing to parse.
                     return null;
                 }

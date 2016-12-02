@@ -1,4 +1,4 @@
-package com.example.nocturna.projectmovie;
+package com.example.nocturna.projectmovie.app;
 
 import android.graphics.Bitmap;
 import android.os.Parcel;
@@ -9,14 +9,14 @@ import android.os.Parcelable;
  */
 
 public class Movie implements Parcelable {
-    String title;
-    String backdropPath;
-    String userRating;
-    String posterPath;
-    String overview;
-    String releaseDate;
-    Bitmap poster;
-    Bitmap backdrop;
+    private String title;
+    private String backdropPath;
+    private String userRating;
+    private String posterPath;
+    private String overview;
+    private String releaseDate;
+    private Bitmap poster;
+    private Bitmap backdrop;
 
     public Movie(String title, String overview, String releaseDate, String userRating, String posterPath, String backdropPath) {
         this.title = title;
