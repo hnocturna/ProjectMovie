@@ -23,7 +23,7 @@ import android.widget.GridView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 
-import com.example.nocturna.projectmovie.R;
+import com.example.nocturna.projectmovie.app.R;
 
 import org.json.JSONArray;
 import org.json.JSONException;

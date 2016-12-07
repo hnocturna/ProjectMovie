@@ -14,7 +14,7 @@ import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import com.example.nocturna.projectmovie.R;
+import com.example.nocturna.projectmovie.app.R;
 
 import java.io.IOException;
 import java.io.InputStream;

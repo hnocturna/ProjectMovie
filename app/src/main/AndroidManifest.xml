@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.nocturna.projectmovie">
+    package="com.example.nocturna.projectmovie.app">
 
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -11,7 +11,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:name=".app.MainActivity"
+            android:name=".MainActivity"
             android:label="@string/app_name"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
@@ -30,14 +30,21 @@
                 <!--android:value="com.example.nocturna.projectmovie.app.MainActivity" />-->
         <!--</activity>-->
         <activity
-            android:name=".app.DetailsActivity"
+            android:name=".DetailsActivity"
             android:label="@string/title_activity_details"
-            android:parentActivityName=".app.MainActivity"
+            android:parentActivityName=".MainActivity"
             android:theme="@style/AppTheme.NoActionBar">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.example.nocturna.projectmovie.app.MainActivity" />
         </activity>
+
+        <provider
+            android:authorities="com.example.nocturna.projectmovie.app"
+            android:name=".data.MovieProvider"
+            android:exported="false"
+            android:enabled="true"
+            />
     </application>
 
 </manifest>

@@ -15,7 +15,7 @@ import android.provider.BaseColumns;
 
 public class MovieContract {
     // Set up static constants that will be used for navigating the database
-    public static final String CONTENT_AUTHORITY = "com.example.hnocturna.projectmovie.app";
+    public static final String CONTENT_AUTHORITY = "com.example.nocturna.projectmovie.app";
     public static final Uri BASE_CONTENT_URI = Uri.parse("content://" + CONTENT_AUTHORITY);
 
     // Paths to each database
@@ -106,10 +106,9 @@ public class MovieContract {
         }
 
         /**
-         * I don't think this is needed. Probably overkill.
-         * TODO: Complete if required.
-         * @param genreId
-         * @return
+         * Method for generating the URI pointing to a specific row in the database with a given genreId
+         * @param genreId genreId
+         * @return URI of the specific row containing the genreId
          */
         public static Uri buildGenreUriFromId(long genreId) {
             Uri uri = CONTENT_URI.buildUpon()
@@ -119,21 +118,16 @@ public class MovieContract {
             return uri;
         }
 
-
-
         /**
-         * Method for retrieving the genre from the URI
-         * @param uri URI containing a query parameter for a genre
-         * @return genreId being queried
+         * Method for obtaining the genreId given a URI containing a genreId
+         * @param uri URI containing genreId
+         * @return genreId
          */
-        public static long getGenreFromUri(Uri uri) {
-            String genreString = uri.getQueryParameter(COLUMN_GENRE_ID);
-            if (genreString != null && genreString.length() > 0) {
-                return Long.parseLong(genreString);
-            } else {
-                return 0;
-            }
+        public static long getGenreIdFromUri(Uri uri) {
+            // The genreId is always the second segment after the "genre table location" segment
+            return Long.parseLong(uri.getPathSegments().get(1));
         }
+
     }
 
     public static final class LinkEntry implements BaseColumns {
@@ -143,13 +137,12 @@ public class MovieContract {
         // For selecting multiple rows in the case of a query
         public static final String CONTENT_TYPE = ContentResolver.CURSOR_DIR_BASE_TYPE + "/" + CONTENT_AUTHORITY + "/" + PATH_LINK;
 
-        // For inserting rows since they need to be inserted one at a time
-        public static final String CONTENT_ITEM_TYPE = ContentResolver.CURSOR_ITEM_BASE_TYPE + "/" + CONTENT_AUTHORITY + "/" + PATH_LINK;
+//        // For inserting rows since they need to be inserted one at a time
+//        public static final String CONTENT_ITEM_TYPE = ContentResolver.CURSOR_ITEM_BASE_TYPE + "/" + CONTENT_AUTHORITY + "/" + PATH_LINK;
 
         // Naming scheme for the link table SQLiteDB. Columns are not required because all columns
         // will be foreign keys
         public static final String TABLE_NAME = "link_table";
-
 
         /**
          * Builds Builds URI pointing to the database row given the row ID
@@ -160,22 +153,22 @@ public class MovieContract {
             return ContentUris.withAppendedId(CONTENT_URI, row);
         }
 
-        /**
-         * Builds a unique URI that the ContentProvider can match by appending "genres" to the URI
-         * to differentiate when querying a genre for all matching movies. Allows for filtering of
-         * database by genre
-         * @param genreId genre ID
-         * @return URI querying all rows for movies for a specific genre
-         */
-        public static Uri buildMovieGenreUri(long genreId) {
-            Uri uri = CONTENT_URI.buildUpon()
-                    .appendPath("genres")
-                    // Query parameter returns multiple entries
-                    .appendQueryParameter(GenreEntry.COLUMN_GENRE_ID, Long.toString(genreId))
-                    .build();
-
-            return uri;
-        }
+//        /**
+//         * Builds a unique URI that the ContentProvider can match by appending "genres" to the URI
+//         * to differentiate when querying a genre for all matching movies. Allows for filtering of
+//         * database by genre
+//         * @param genreId genre ID
+//         * @return URI querying all rows for movies for a specific genre
+//         */
+//        public static Uri buildMovieGenreUri(long genreId) {
+//            Uri uri = CONTENT_URI.buildUpon()
+//                    .appendPath("genres")
+//                    // Query parameter returns multiple entries
+//                    .appendQueryParameter(GenreEntry.COLUMN_GENRE_ID, Long.toString(genreId))
+//                    .build();
+//
+//            return uri;
+//        }
 
         /**
          * Builds a unique URI that the ContentProvider can match by appending "movies" to the URI
@@ -190,6 +183,49 @@ public class MovieContract {
                     .build();
 
             return uri;
+        }
+
+        /**
+         * Builds a unique URI that the ContentProvider can match by appending "genres" to the URI
+         * to differnetiate when querying a genre for all matching movies
+         * @param genreId genreId
+         * @return URI querying for all rows for a matching genre
+         */
+        public static Uri buildMoviesUriFromGenreId(long genreId) {
+            Uri uri = CONTENT_URI.buildUpon()
+                    .appendPath("genres")
+                    .appendQueryParameter(GenreEntry.COLUMN_GENRE_ID, Long.toString(genreId))
+                    .build();
+
+            return uri;
+        }
+
+        /**
+         * Method for retrieving the genre from the URI
+         * @param uri URI containing a query parameter for a genre
+         * @return genreId being queried
+         */
+        public static long getGenreFromUri(Uri uri) {
+            String genreString = uri.getQueryParameter(GenreEntry.COLUMN_GENRE_ID);
+            if (genreString != null && genreString.length() > 0) {
+                return Long.parseLong(genreString);
+            } else {
+                return -1;
+            }
+        }
+
+        /**
+         * Method for retrieving the movie from the URI
+         * @param uri URI containing a query parameter for a movie
+         * @return movieId being queried
+         */
+        public static long getMovieFromUri(Uri uri) {
+            String genreString = uri.getQueryParameter(MovieEntry.COLUMN_MOVIE_ID);
+            if (genreString != null && genreString.length() > 0) {
+                return Long.parseLong(genreString);
+            } else {
+                return -1;
+            }
         }
     }
 }

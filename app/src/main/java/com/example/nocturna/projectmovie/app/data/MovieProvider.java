@@ -8,7 +8,6 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
-import android.util.Log;
 
 import com.example.nocturna.projectmovie.app.data.MovieContract.MovieEntry;
 import com.example.nocturna.projectmovie.app.data.MovieContract.GenreEntry;
@@ -26,43 +25,51 @@ public class MovieProvider extends ContentProvider {
     // Constants
     private MovieDbHelper mOpenHelper;
     static final int MOVIE = 100;
-    static final int LINK_MOVIE_WITH_GENRES = 101;
-    static final int LINK_GENRES_WITH_MOVIE = 102;
-    static final int MOVIE_AND_GENRES = 103;
-    static final int GENRE = 200;
+    static final int MOVIE_WITH_ID = 101;
+    static final int MOVIE_AND_GENRES = 200;
+    static final int MOVIES_AND_GENRES_QUERY = 201;
+//    static final int LINK_MOVIE_WITH_GENRES = 201;
+//    static final int LINK_GENRES_WITH_MOVIE = 202;
+    static final int GENRE = 300;
+    static final int GENRE_WITH_ID = 301;
 
 
     // URI Matcher used by this content provider
     UriMatcher sUriMatcher = buildUriMatcher();
 
     // Query builder for querying all databases
-    private static final SQLiteQueryBuilder sMoviesByGenreQueryBuilder;
+    private static final SQLiteQueryBuilder sMoviesAndGenreQueryBuilder;
 
     /**
      * Matches URIs so the content provider can access the correct database and rows
      * @return UriMatcher that will match the query to the database
      */
     static UriMatcher buildUriMatcher() {
+        // Constants
+        final String authority = MovieContract.CONTENT_AUTHORITY;
+
         // Root URI
         final UriMatcher uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
-        final String authority = MovieContract.CONTENT_AUTHORITY;
 
         // URIs that need to be matched
         uriMatcher.addURI(authority, MovieContract.PATH_MOVIES, MOVIE);
-        uriMatcher.addURI(authority, MovieContract.PATH_LINK + "/movies/#", LINK_MOVIE_WITH_GENRES);
-        uriMatcher.addURI(authority, MovieContract.PATH_LINK + "/genres/#", LINK_GENRES_WITH_MOVIE);
+        uriMatcher.addURI(authority, MovieContract.PATH_MOVIES + "/*", MOVIE_WITH_ID);
         uriMatcher.addURI(authority, MovieContract.PATH_GENRES, GENRE);
+        uriMatcher.addURI(authority, MovieContract.PATH_GENRES + "/*", GENRE_WITH_ID);
         uriMatcher.addURI(authority, MovieContract.PATH_LINK, MOVIE_AND_GENRES);
+        uriMatcher.addURI(authority, MovieContract.PATH_LINK + "/*", MOVIES_AND_GENRES_QUERY);
+//        uriMatcher.addURI(authority, MovieContract.PATH_LINK + "/movies/*", LINK_MOVIE_WITH_GENRES);
+//        uriMatcher.addURI(authority, MovieContract.PATH_LINK + "/genres/*", LINK_GENRES_WITH_MOVIE);
 
         return uriMatcher;
     }
 
-    // Sets the sMoviesByGenreQueryBuilder as an INNER JOIN between the three databases because it
+    // Sets the sMoviesAndGenreQueryBuilder as an INNER JOIN between the three databases because it
     // is final and cannot be edited using a return value from another method.
     static {
-        sMoviesByGenreQueryBuilder = new SQLiteQueryBuilder();
+        sMoviesAndGenreQueryBuilder = new SQLiteQueryBuilder();
 
-        sMoviesByGenreQueryBuilder.setTables(
+        sMoviesAndGenreQueryBuilder.setTables(
                 MovieEntry.TABLE_NAME + " INNER JOIN " +
                         LinkEntry.TABLE_NAME +
                         " ON " + MovieEntry.TABLE_NAME +
@@ -75,28 +82,75 @@ public class MovieProvider extends ContentProvider {
                         " = " + GenreEntry.TABLE_NAME +
                         "." + GenreEntry.COLUMN_GENRE_ID
         );
-
-        Log.v(LOG_TAG, "Built query: " + sMoviesByGenreQueryBuilder.toString());
     }
 
     // Static constants for querying with selection
     private static final String sMoviesOfGenreSelection = LinkEntry.TABLE_NAME + "." + GenreEntry.COLUMN_GENRE_ID + " = ?";
     private static final String sGenresOfMovieSelection = LinkEntry.TABLE_NAME + "." + MovieEntry.COLUMN_MOVIE_ID + " = ?";
+    private static final String sMovieSelection = MovieEntry.TABLE_NAME + "." + MovieEntry.COLUMN_MOVIE_ID + " = ?";
+    private static final String sGenreSelection = GenreEntry.TABLE_NAME + "." + GenreEntry.COLUMN_GENRE_ID + " = ?";
 
     /**
-     * Method for querying database using a Cursor for all the movies of a genre
+     * Helper method for querying database using a Cursor for all the movies of a genre or vice-versa
      * @param uri Uri containing the genreId
      * @param projection columns to return
      * @param sortOrder sort order
-     * @return Cursor selecting all movies of a given genre from the Link Table
+     * @return Cursor selecting all movies of a given genre or vice-versa from the Link Table
      */
-    private Cursor getMoviesByGenre(Uri uri, String[] projection, String sortOrder) {
-        long genreId = GenreEntry.getGenreFromUri(uri);
+    private Cursor getMoviesAndGenres(Uri uri, String[] projection, String sortOrder) {
+        // Attempt to retrieve both IDs indiscriminately. Only one should return a real ID. The
+        // other should return -1 specifying whether genres or movies is being queried for.
+        long genreId = LinkEntry.getGenreFromUri(uri);
+        long movieId = LinkEntry.getMovieFromUri(uri);
 
-        String[] selectionArgs = new String[] {Long.toString(genreId)};
-        String selection = sMoviesOfGenreSelection;
+        // Return the appropriate cursor
+        if (genreId != -1) {
+            // If a genreId is returned, then movies are being queried for
+            String[] selectionArgs = new String[] {Long.toString(genreId)};
+            String selection = sMoviesOfGenreSelection;
 
-        return sMoviesByGenreQueryBuilder.query(
+            return sMoviesAndGenreQueryBuilder.query(
+                    mOpenHelper.getReadableDatabase(),
+                    projection,
+                    selection,
+                    selectionArgs,
+                    null,
+                    null,
+                    sortOrder
+            );
+        } else if (movieId != -1) {
+            // If movieId is returned, then genres are being queried
+            String[] selectionArgs = new String[] {Long.toString(movieId)};
+            String selection = sGenresOfMovieSelection;
+
+            return sMoviesAndGenreQueryBuilder.query(
+                    mOpenHelper.getReadableDatabase(),
+                    projection,
+                    selection,
+                    selectionArgs,
+                    null,
+                    null,
+                    sortOrder
+            );
+        } else {
+            throw new UnsupportedOperationException("Uri (" + uri + ") does not query genres or movies!");
+        }
+    }
+
+    /**
+     * Method for querying database using a Cursor for all the genres of a movie
+     * @param uri Uri containing the movieId
+     * @param projection columns to return
+     * @param sortOrder sort order
+     * @return Cursor selecting all genres of a given movie from the Link Table
+     */
+    private Cursor getGenresOfMovie(Uri uri, String[] projection, String sortOrder) {
+        long movieId = LinkEntry.getMovieFromUri(uri);
+
+        String[] selectionArgs = new String[] {Long.toString(movieId)};
+        String selection = sGenresOfMovieSelection;
+
+        return sMoviesAndGenreQueryBuilder.query(
                 mOpenHelper.getReadableDatabase(),
                 projection,
                 selection,
@@ -108,20 +162,46 @@ public class MovieProvider extends ContentProvider {
     }
 
     /**
-     * Method for querying database using a Cursor for all the genres of a movie
-     * @param uri Uri containing the movieId
+     * Helper method for querying the movies table with a uri containing a movieId
+     * @param uri URI containing movieId after the correct query parameter
      * @param projection columns to return
-     * @param sortOrder sort order
-     * @return Cursor selecting all genres of a given movie from the Link Table
+     * @param sortOrder order by which the rows should be sorted (only returning a single row, so
+     *                  this variable can probably be removed)
+     * @return Cursor querying for a single row WHERE movieId = ? {movieId}
      */
-    private Cursor getGenresOfMovie(Uri uri, String[] projection, String sortOrder) {
+    private Cursor getMovieById(Uri uri, String[] projection, String sortOrder) {
         long movieId = MovieEntry.getMovieIdFromUri(uri);
 
+        String selection = sMovieSelection;
         String[] selectionArgs = new String[] {Long.toString(movieId)};
-        String selection = sGenresOfMovieSelection;
 
-        return sMoviesByGenreQueryBuilder.query(
-                mOpenHelper.getReadableDatabase(),
+        return mOpenHelper.getReadableDatabase().query(
+                MovieEntry.TABLE_NAME,
+                projection,
+                selection,
+                selectionArgs,
+                null,
+                null,
+                sortOrder
+        );
+    }
+
+    /**
+     * Helper method for querying the genre table with a uri containing a genreId
+     * @param uri URI containing genreId after the correct query parameter
+     * @param projection columns to return
+     * @param sortOrder order by which the rows should be sorted (only returning a single row, so
+     *                  this variable can probably be removed)
+     * @return Cursor querying for a single row WHERE genreId = ? {genreId}
+     */
+    private Cursor getGenreById(Uri uri, String[] projection, String sortOrder) {
+        long genreId = GenreEntry.getGenreIdFromUri(uri);
+
+        String selection = sGenreSelection;
+        String[] selectionArgs = new String[] {Long.toString(genreId)};
+
+        return mOpenHelper.getReadableDatabase().query(
+                GenreEntry.TABLE_NAME,
                 projection,
                 selection,
                 selectionArgs,
@@ -133,6 +213,8 @@ public class MovieProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
+        // Initialize the MovieDbHelper
+        mOpenHelper = new MovieDbHelper(getContext());
         return true;
     }
 
@@ -145,21 +227,29 @@ public class MovieProvider extends ContentProvider {
     @Override
     public String getType(Uri uri) {
         final int match = sUriMatcher.match(uri);
+        String type = "";
 
         switch (match) {
             case MOVIE:
+                return MovieEntry.CONTENT_TYPE;
+            case MOVIE_WITH_ID:
                 return MovieEntry.CONTENT_ITEM_TYPE;
             case GENRE:
+                return GenreEntry.CONTENT_TYPE;
+            case GENRE_WITH_ID:
                 return GenreEntry.CONTENT_ITEM_TYPE;
-            case LINK_GENRES_WITH_MOVIE:
-                return LinkEntry.CONTENT_TYPE;
-            case LINK_MOVIE_WITH_GENRES:
-                return LinkEntry.CONTENT_TYPE;
+//            case LINK_GENRES_WITH_MOVIE:
+//                return LinkEntry.CONTENT_TYPE;
+//            case LINK_MOVIE_WITH_GENRES:
+//                return LinkEntry.CONTENT_TYPE;
             case MOVIE_AND_GENRES:
-                return LinkEntry.CONTENT_ITEM_TYPE;
+                return LinkEntry.CONTENT_TYPE;
+            case MOVIES_AND_GENRES_QUERY:
+                return LinkEntry.CONTENT_TYPE;
             default:
                 throw new UnsupportedOperationException("Unknown URI: " + uri);
         }
+
     }
 
     /**
@@ -174,6 +264,7 @@ public class MovieProvider extends ContentProvider {
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
         Cursor cursor;
+
         switch (sUriMatcher.match(uri)) {
             case MOVIE: {
                 cursor = mOpenHelper.getReadableDatabase().query(
@@ -185,6 +276,10 @@ public class MovieProvider extends ContentProvider {
                         null,
                         sortOrder
                 );
+                break;
+            }
+            case MOVIE_WITH_ID: {
+                cursor = getMovieById(uri, projection, sortOrder);
                 break;
             }
             case GENRE: {
@@ -199,14 +294,34 @@ public class MovieProvider extends ContentProvider {
                 );
                 break;
             }
-            case LINK_GENRES_WITH_MOVIE: {
-                cursor = getGenresOfMovie(uri, projection, sortOrder);
+            case GENRE_WITH_ID: {
+                cursor = getGenreById(uri, projection, sortOrder);
                 break;
             }
-            case LINK_MOVIE_WITH_GENRES: {
-                cursor = getMoviesByGenre(uri, projection, sortOrder);
+            case MOVIE_AND_GENRES: {
+                cursor = mOpenHelper.getReadableDatabase().query(
+                        LinkEntry.TABLE_NAME,
+                        projection,
+                        selection,
+                        selectionArgs,
+                        null,
+                        null,
+                        sortOrder
+                );
                 break;
             }
+            case MOVIES_AND_GENRES_QUERY: {
+                cursor = getMoviesAndGenres(uri, projection, sortOrder);
+                break;
+            }
+//            case LINK_GENRES_WITH_MOVIE: {
+//                cursor = getGenresOfMovie(uri, projection, sortOrder);
+//                break;
+//            }
+//            case LINK_MOVIE_WITH_GENRES: {
+//                cursor = getMoviesByGenre(uri, projection, sortOrder);
+//                break;
+//            }
             default:
                 throw new UnsupportedOperationException("Unknown URI: " + uri);
         }
@@ -354,9 +469,9 @@ public class MovieProvider extends ContentProvider {
 
         switch (match) {
             case MOVIE: {
+                // Prepare the database for bulk inserts
+                db.beginTransaction();
                 try {
-                    // Prepare the database for bulk inserts
-                    db.beginTransaction();
                     //  Insert each row individually utilizing the ContentValues provided
                     for (ContentValues value : values) {
                         long _id = db.insert(MovieEntry.TABLE_NAME, null, value);
@@ -377,15 +492,15 @@ public class MovieProvider extends ContentProvider {
                 return rows;
             }
             case GENRE: {
+                db.beginTransaction();
                 try {
-                    db.beginTransaction();
                     for (ContentValues value : values) {
                         long _id = db.insert(GenreEntry.TABLE_NAME, null, value);
                         if (_id > 0) {
                             rows++;
                         }
-                        db.setTransactionSuccessful();
                     }
+                    db.setTransactionSuccessful();
                 } finally {
                     db.endTransaction();
                 }
@@ -395,15 +510,15 @@ public class MovieProvider extends ContentProvider {
                 return rows;
             }
             case MOVIE_AND_GENRES: {
+                db.beginTransaction();
                 try {
-                    db.beginTransaction();
                     for (ContentValues value : values) {
                         long _id = db.insert(LinkEntry.TABLE_NAME, null, value);
                         if (_id > 0) {
                             rows++;
                         }
-                        db.setTransactionSuccessful();
                     }
+                    db.setTransactionSuccessful();
                 } finally {
                     db.endTransaction();
                 }
@@ -412,7 +527,8 @@ public class MovieProvider extends ContentProvider {
                 getContext().getContentResolver().notifyChange(uri, null);
                 return rows;
             }
+            default:
+                return super.bulkInsert(uri, values);
         }
-        return super.bulkInsert(uri, values);
     }
 }

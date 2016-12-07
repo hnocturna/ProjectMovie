@@ -15,7 +15,7 @@ import android.widget.Button;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 
-import com.example.nocturna.projectmovie.R;
+import com.example.nocturna.projectmovie.app.R;
 
 public class MainActivity extends AppCompatActivity {
     public static final String EXTRA_MOVIE = "movie";

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.opengl.GLException;
+import android.util.Log;
 
 import com.example.nocturna.projectmovie.app.data.MovieContract.MovieEntry;
 import com.example.nocturna.projectmovie.app.data.MovieContract.GenreEntry;
@@ -38,7 +39,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
                 MovieEntry.COLUMN_OVERVIEW + " TEXT NOT NULL, " +
                 MovieEntry.COLUMN_RATING + " REAL NOT NULL, " +
                 MovieEntry.COLUMN_POPULARITY + " REAL NOT NULL, " +
-                MovieEntry.COLUMN_RELEASE_DATE + "INTEGER NOT NULL, " +
+                MovieEntry.COLUMN_RELEASE_DATE + " TEXT NOT NULL, " +
                 MovieEntry.COLUMN_BACKDROP + " TEXT NOT NULL, " +
                 MovieEntry.COLUMN_POSTER + " TEXT NOT NULL, " +
                 MovieEntry.COLUMN_TRAILER + " TEXT NOT NULL, " +
@@ -50,7 +51,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
         // Table storing each genre ID and their String equivalent as a single row
         final String SQL_CREATE_GENRE_TABLE = "CREATE TABLE " + GenreEntry.TABLE_NAME + " (" +
                 // GenreId is unique and therefore used as the primary key
-                GenreEntry.COLUMN_GENRE_ID + " INTEGER NOT NULL PRIMARY KEY " +
+                GenreEntry.COLUMN_GENRE_ID + " INTEGER NOT NULL PRIMARY KEY, " +
                 GenreEntry.COLUMN_GENRE + " TEXT UNIQUE NOT NULL, " +
                 // Since a genre referes to multiple movies, it must reference the link table that
                 // stores non-unique entries
@@ -61,11 +62,11 @@ public class MovieDbHelper extends SQLiteOpenHelper {
         // entries in each row, they include foreign keys to the link table. Therefore, the link
         // table must be created first storing each movie and its genres
         final String SQL_CREATE_LINK_TABLE = "CREATE TABLE " + LinkEntry.TABLE_NAME + " (" +
-                MovieEntry.COLUMN_MOVIE_ID + " INTEGER NOT NULL " +
-                GenreEntry.COLUMN_GENRE_ID + " INTEGER NOT NULL " +
+                MovieEntry.COLUMN_MOVIE_ID + " INTEGER NOT NULL, " +
+                GenreEntry.COLUMN_GENRE_ID + " INTEGER NOT NULL, " +
                 // By making the combination a primary key, it will guarantee that each row is
                 // unique.
-                "PRIMARY KEY (" + MovieEntry.COLUMN_MOVIE_ID + ", " + GenreEntry.COLUMN_GENRE_ID + ")):";
+                "PRIMARY KEY (" + MovieEntry.COLUMN_MOVIE_ID + ", " + GenreEntry.COLUMN_GENRE_ID + "));";
 
         db.execSQL(SQL_CREATE_MOVIES_TABLE);
         db.execSQL(SQL_CREATE_GENRE_TABLE);
