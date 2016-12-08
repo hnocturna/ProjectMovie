@@ -2,13 +2,14 @@ package com.example.nocturna.projectmovie.app;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+import android.database.Cursor;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -23,30 +24,22 @@ import android.widget.GridView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 
-import com.example.nocturna.projectmovie.app.R;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
+import com.example.nocturna.projectmovie.app.data.MovieContract;
 
 /**
  * A placeholder fragment containing a simple view.
  */
-public class MainActivityFragment extends Fragment {
+public class MainActivityFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
     String LOG_TAG = MainActivityFragment.class.getSimpleName();
-    MoviePosterAdapter moviePosterAdapter;
-    Movie[] movieArray;
-    public MainActivityFragment() {
+    // Member variables
+    private MoviePosterAdapter mMoviePosterAdapter;
+    private Movie[] movieArray;                                 // Array of movies that need to be loaded --deprecated?
+    private int mCursorPosition;                                // Holds the position of the Cursor to be used by the CursorLoader and the MoviePosterAdapter
+    private GridView mGridView;                                 // GridView of the posters
 
-    }
+    // Constants
+    private static final int MOVIE_LOADER = 0;                  // ID of the CursorLoader for the movies
+    private static final String SELECTED_KEY = "SELECTION";     // TODO: Fill this in
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -152,8 +145,8 @@ public class MainActivityFragment extends Fragment {
 
         // Select the GridView and attach the MoviePosterAdapter custom made for the posters
         GridView gridView = (GridView) rootView.findViewById(R.id.movie_grid);
-        moviePosterAdapter = new MoviePosterAdapter(getActivity(), new Movie[0]);
-        gridView.setAdapter(moviePosterAdapter);
+        mMoviePosterAdapter = new MoviePosterAdapter(getActivity(), new Movie[0]);
+        gridView.setAdapter(mMoviePosterAdapter);
 
         // Set onClickItemListener so clicking a poster will lead to DetailsActivity
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -182,201 +175,47 @@ public class MainActivityFragment extends Fragment {
         return rootView;
     }
 
-    private class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            moviePosterAdapter.clear();
-        }
+    /**
+     * Method called to create the CursorLoader that will cycle through the data being queried
+     * @param id ID of the Loader
+     * @param args arguments supplied by the caller
+     * @return CursorLoader instance that is ready to start loading
+     */
+    @Override
+    public Loader onCreateLoader(int id, Bundle args) {
+        Uri moviesUri = MovieContract.MovieEntry.CONTENT_URI;
+        return new CursorLoader(
+                getActivity(),
+                moviesUri,
+                new String[] {MovieContract.MovieEntry.COLUMN_POSTER}, // The main screen only shows posters
+                null,
+                null,
+                null
+        );
+    }
 
-        private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
-
-        /*
-         * Method of extracting the data required from the JSON String returned by the
-         * FetchMoviesTask and returning it as a list of string of URLs to get the movie posters
-         * from
-         */
-        private Movie[] getMovieDataFromString(String jsonString) throws JSONException {
-            // List of items that need to be extracted
-            final String TMD_MOVIE_RESULTS = "results";
-            final String TMD_POSTER_PATH = "poster_path";
-            final String TMD_TITLE = "original_title";
-            final String TMD_OVERVIEW = "overview";
-            final String TMD_RATING = "vote_average";
-            final String TMD_RELEASE_DATE = "release_date";
-            final String TMD_BACKDROP_PATH = "backdrop_path";
-
-            final String TMD_POSTER_BASE = "http://image.tmdb.org/t/p/w342";
-            final String TMD_BACKDROP_BASE = "https://image.tmdb.org/t/p/w780";
-
-            JSONObject movieJson = new JSONObject(jsonString);
-            JSONArray movieJsonArray = movieJson.getJSONArray(TMD_MOVIE_RESULTS);
-
-            Movie[] movieArray = new Movie[movieJsonArray.length()];
-
-            for (int i = 0; i < movieJsonArray.length(); i++) {
-                // Create a new Movie object and populate it with details from the JSON string
-                // and add it to an array of Movies to pass back to the doInBackground
-                JSONObject movieJsonObject = movieJsonArray.getJSONObject(i);
-                String title = movieJsonObject.getString(TMD_TITLE);
-                String posterPath = movieJsonObject.getString(TMD_POSTER_PATH);
-                String overview = movieJsonObject.getString(TMD_OVERVIEW);
-                String rating = movieJsonObject.getString(TMD_RATING);
-                String releaseDate = movieJsonObject.getString(TMD_RELEASE_DATE);
-                String backdropPath = movieJsonObject.getString(TMD_BACKDROP_PATH);
-
-                // Prepend the base URL for the poster and the backdrop before adding it to the
-                // Movie object
-                posterPath = TMD_POSTER_BASE + posterPath;
-                backdropPath = TMD_BACKDROP_BASE + backdropPath;
-
-                movieArray[i] = new Movie(title, overview, releaseDate, rating, posterPath, backdropPath);
-            }
-
-            return movieArray;
-        }
-
-        @Override
-        protected Movie[] doInBackground(Void... params) {
-            if (params == null) {
-                return null;
-            }
-
-            String movieJsonStr;     // Holds the JSON string returned from the connection.
-
-            // Variables that need to be defined outside of the try block so it can be closed in the
-            // finally block
-            BufferedReader reader = null;
-            HttpURLConnection urlConnection = null;
-
-            try {
-                // Build the URL using a base Uri and appending on additional parameters
-                final String baseUri = "http://api.themoviedb.org/3/movie";
-                final String API_PARAM = "api_key";
-                final String API_KEY = "b1f582365e9ca840bbf384a03c4c37cd";
-
-                // Get the user-preferred sort mode from preferences
-                String sortMode = PreferenceManager.getDefaultSharedPreferences(getActivity())
-                        .getString(
-                                getString(R.string.pref_sort_key),
-                                getString(R.string.pref_sort_popular)
-                        );
-
-                Log.v(LOG_TAG, "Downloading movies. Sorting by: " + sortMode);
-
-                Uri builtUri = Uri.parse(baseUri).buildUpon()
-                        .appendPath(sortMode)
-                        .appendQueryParameter(API_PARAM, API_KEY)
-                        .build();
-
-                // Convert the Uri to a URL and open a connection
-                URL url = new URL(builtUri.toString());
-                urlConnection = (HttpURLConnection) url.openConnection();
-                urlConnection.setRequestMethod("GET");
-                urlConnection.connect();
-
-                // Log.v(LOG_TAG, "Built URL: " + url.toString());
-
-                // Get the input stream from the website and read the contents, ensuring that
-                // it didn't return a blank stream.
-                InputStream inputStream = urlConnection.getInputStream();
-                StringBuffer buffer = new StringBuffer();
-
-                if (inputStream == null) {
-                    // Empty stream, so nothing to do
-                    return null;
-                }
-
-                // Read the lines from the stream
-                reader = new BufferedReader(new InputStreamReader(inputStream));
-
-                // Append a new line to each line read to make it easier for humans to read
-                // for debugging purposes utilizing the StringBuffer to append.
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    buffer.append(line + "\n");
-                }
-
-                // Convert the buffer to a String that can be converted to a JSON Object
-                if (buffer.length() == 0) {
-                    // Nothing has been read, so nothing to parse.
-                    return null;
-                }
-                movieJsonStr = buffer.toString();
-
-                // Store the retrieved movies as an array so the images can also be downloaded in
-                // the background. This prevents issues from Picasso trying to load images slower
-                // than they disappear from view as you scroll.
-                Movie[] movieArrayFromJson = getMovieDataFromString(movieJsonStr);
-
-                for (Movie movie : movieArrayFromJson) {
-                    // Defined outside of try block so it can be closed in the finally block
-                    HttpURLConnection posterConnection = null;
-
-                    try {
-                        // Open a connection to the poster image.
-                        URL posterUrl = new URL(movie.getPosterPath());
-                        posterConnection = (HttpURLConnection) posterUrl.openConnection();
-                        posterConnection.setDoInput(true);
-                        posterConnection.connect();
-
-                        // Convert to an input stream and utilize BitmapFactor to output a bitmap
-                        InputStream bitmapStream = posterConnection.getInputStream();
-                        Bitmap poster = BitmapFactory.decodeStream(bitmapStream);
-
-                        movie.addPoster(poster);
-                    } finally {
-                        if (posterConnection != null) {
-                            posterConnection.disconnect();
-                        }
-                    }
-                }
-                return  movieArray = movieArrayFromJson;
-
-                // Log.v(LOG_TAG, movieJsonStr);
-                // Log.v(LOG_TAG, "Test");
-
-            } catch (MalformedURLException e) {
-                // In case the URL is incorrect
-                Log.d(LOG_TAG, "Malformed URL", e);
-            } catch (IOException e) {
-                // If unable to connect to the website (e.g. no network connection)
-                Log.d(LOG_TAG, "Unable to connect to TheMovieDB.org", e);
-            } catch (Exception e) {
-                // In case of any errors that were missed
-                Log.d(LOG_TAG, "Exception: ", e);
-            }
-            finally {
-                // Close opened resources
-                if (urlConnection != null) {
-                    urlConnection.disconnect();
-                }
-                if (reader != null) {
-                    try {
-                        reader.close();
-                    } catch (IOException e) {
-                        Log.d(LOG_TAG, "Unable to close stream", e);
-                    }
-                }
-
-            }
-
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Movie[] moviesArray) {
-            // Add the movies to the MoviePosterAdapter attached to the GridView
-            if (moviesArray == null) {
-                Log.d(LOG_TAG, "No movies extracted from JSON");
-                return;
-            }
-            moviePosterAdapter.clear();
-
-            for (Movie movie : moviesArray) {
-                moviePosterAdapter.add(movie);
-            }
-            return;
+    /**
+     * Swaps data the MovieAdapter is referencing for the new data after the CursorLoader has its
+     * load.
+     * @param loader CursorLoader that has finished loading its data
+     * @param cursor data returned by the CursorLoader
+     */
+    @Override
+    public void onLoadFinished(Loader loader, Cursor cursor) {
+        mMoviePosterAdapter.swapCursor(cursor);
+        if (mCursorPosition != GridView.INVALID_POSITION) {
+            mGridView.smoothScrollToPosition(mCursorPosition);
         }
     }
+
+    /**
+     * Called when the Loader is reset, making its data unavailable. Points the MovieAdapter at null
+     * data.
+     * @param loader CursorLoader that has reset
+     */
+    @Override
+    public void onLoaderReset(Loader loader) {
+        mMoviePosterAdapter.swapCursor(null);
+    }
+
 }

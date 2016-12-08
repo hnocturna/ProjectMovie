@@ -1,77 +1,131 @@
 package com.example.nocturna.projectmovie.app;
 
 import android.content.Context;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.AsyncTask;
+import android.support.v4.widget.CursorAdapter;
+import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.BaseAdapter;
 import android.widget.ImageView;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import com.example.nocturna.projectmovie.app.data.MovieContract;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 /**
  * Created by Nocturna on 10/9/2016.
- * Takes Movie objects and extracts the bitmap from the object and passes it to an ImageView that is
- * then displayed in the GridView of the MainActivity
+ * Adapter for loading poster images to display in the GridView of the main screen by getting the
+ * poster URL from the database, downloading the poster, and then displaying it in the ImageView
  */
 
-public class MoviePosterAdapter extends BaseAdapter {
+public class MoviePosterAdapter extends CursorAdapter {
     String LOG_TAG = MoviePosterAdapter.class.getSimpleName();
-    List<Movie> movieList;
-    Context mContext;
+    // Member variables
+    Bitmap[] moviePosters;      // Used to hold the posters downloaded in memory so they do not need to be continually downloaded each time the view is loaded.
 
-    public MoviePosterAdapter(Context context, Movie[] movieArray) {
-        // Creates a new ArrayList in case we pass in null for some debugging reason
-        if (movieArray != null) {
-            this.movieList = new ArrayList<>(Arrays.asList(movieArray));
-        } else {
-            this.movieList = new ArrayList<>();
+    public MoviePosterAdapter(Context context, Cursor cursor, int flags) {
+        super(context, cursor, flags);
+        // Instantiate the member arrays with the number of rows returned by the cursor
+        int cursorCount = cursor.getCount();
+        moviePosters = new Bitmap[cursorCount];
+    }
+
+    /**
+     * Creates a new view to hold the data from the cursor
+     * @param context interface to application's global information
+     * @param cursor cursor to retrieve data from
+     * @param parent parent of the view to be created
+     * @return newly created view
+     */
+    @Override
+    public View newView(Context context, Cursor cursor, ViewGroup parent) {
+        View view = LayoutInflater.from(context).inflate(R.layout.list_item_movieposter, parent, true);
+        ViewHolder viewHolder = new ViewHolder(view);
+        view.setTag(viewHolder);
+        return view;
+    }
+
+    @Override
+    public void bindView(View view, Context context, Cursor cursor) {
+        // Variables to be passed to the FetchPosterTask
+        int cursorPosition = cursor.getPosition();
+        String posterPath = cursor.getString(cursor.getColumnIndex(MovieContract.MovieEntry.COLUMN_POSTER));
+        ViewHolder viewHolder = (ViewHolder) view.getTag();
+        ImageView imageView = viewHolder.posterView;
+
+        if (moviePosters[cursorPosition] == null) {
+            Object[] params = new Object[] {posterPath, cursorPosition};
         }
-        mContext = context;
     }
 
-    @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
-        ImageView imageView;
-        Movie movie = movieList.get(position);
+    /**
+     * Helper Class for setting children of the view. Reduces the time required for the system to
+     * find each view
+     */
+    public static class ViewHolder {
+        public final ImageView posterView;
 
-        if (convertView == null) {
-            // Creates a new ImageView for the item if it is the first time loading the view
-            imageView = new ImageView(mContext);
-        } else {
-            imageView = (ImageView) convertView;
+        public ViewHolder(View view) {
+            posterView = (ImageView) view.findViewById(R.id.detail_poster_image);
         }
-        // Set the poster bitmap to the ImageView
-        imageView.setImageBitmap(movie.getPoster());
-        imageView.setPadding(0,8,0,8);
-        // Log.v(LOG_TAG, "Loading poster URL: " + movieList.get(position));
-        return imageView;
     }
 
-    @Override
-    public long getItemId(int position) {
-        return 0;
-    }
+    private class FetchPosterTask extends AsyncTask<Object, Void, Bitmap> {
+        ImageView posterView;
 
-    @Override
-    public Object getItem(int position) {
-        return movieList.get(position);
-    }
+        @Override
+        protected Bitmap doInBackground(Object... params) {
+            // Retrieve the variables passed
+            String posterPath = (String) params[0];         // Path of the poster
+            int position = (Integer) params[1];             // The position of the cursor
+            this.posterView = (ImageView) params[2];        // ImageView requiring poster
+            Bitmap poster = null;                           // Bitmap to be passed to onPostExecute
 
-    @Override
-    public int getCount() {
-        return movieList.size();
-    }
+            if (posterPath.isEmpty()) {
+                // No URL passed. Nothing to do.
+                return null;
+            }
+            // Defined outside of try block so it can be closed in the finally block
+            HttpURLConnection posterConnection = null;
 
-    public void clear() {
-        movieList = new ArrayList<>();
-        notifyDataSetChanged();
-    }
+            try {
+                // Open a connection to the poster image.
+                URL posterUrl = new URL(posterPath);
+                posterConnection = (HttpURLConnection) posterUrl.openConnection();
+                posterConnection.setDoInput(true);
+                posterConnection.connect();
 
-    public void add(Movie movie) {
-        movieList.add(movie);
-        notifyDataSetChanged();
-        // Log.v(LOG_TAG, "Poster URL added: " + url);
+                // Convert to an input stream and utilize BitmapFactory to output a bitmap
+                InputStream bitmapStream = posterConnection.getInputStream();
+                poster = BitmapFactory.decodeStream(bitmapStream);
+
+                moviePosters[position] = poster;
+            } catch (MalformedURLException e) {
+                // Error if URL is incorrect
+                Log.d(LOG_TAG, "Error ", e);
+                e.printStackTrace();
+            } catch (IOException e) {
+                Log.d(LOG_TAG, "Error ", e);
+                e.printStackTrace();
+            } finally {
+                if (posterConnection != null) {
+                    posterConnection.disconnect();
+                }
+            }
+            return poster;
+        }
+
+        @Override
+        protected void onPostExecute(Bitmap bitmap) {
+            posterView.setImageBitmap(bitmap);
+        }
     }
 }

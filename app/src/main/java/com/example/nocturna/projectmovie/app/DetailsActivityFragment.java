@@ -14,8 +14,6 @@ import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import com.example.nocturna.projectmovie.app.R;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -140,7 +138,7 @@ public class DetailsActivityFragment extends Fragment {
             TextView ratingText = (TextView) getView().findViewById(R.id.detail_rating_text);
             TextView releaseText = (TextView) getView().findViewById(R.id.detail_release_text);
 
-            ImageView posterImage = (ImageView) getView().findViewById(R.id.poster_image);
+            ImageView posterImage = (ImageView) getView().findViewById(R.id.detail_poster_image);
             ImageView backdropImage = (ImageView) getView().findViewById(R.id.detail_backdrop_image);
 
             if (movie.getPoster() != null) {
