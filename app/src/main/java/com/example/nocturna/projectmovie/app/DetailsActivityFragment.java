@@ -154,7 +154,7 @@ public class DetailsActivityFragment extends Fragment {
 
             String movieTitle = movie.getTitle();
             String movieOverview = movie.getOverview();
-            String movieRating = movie.getUserRating();
+            String movieRating = Double.toString(movie.getUserRating());
             String movieReleaseDate = movie.getReleaseDate();
 
             titleText.setText(movieTitle);

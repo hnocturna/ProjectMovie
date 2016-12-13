@@ -42,7 +42,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
                 MovieEntry.COLUMN_RELEASE_DATE + " TEXT NOT NULL, " +
                 MovieEntry.COLUMN_BACKDROP + " TEXT NOT NULL, " +
                 MovieEntry.COLUMN_POSTER + " TEXT NOT NULL, " +
-                MovieEntry.COLUMN_TRAILER + " TEXT NOT NULL, " +
+                MovieEntry.COLUMN_TRAILER + " TEXT, " +
                 // Since a single movie can be multiple genres, a link table will be utilized
                 // to relate all the genres to a movie and vice-versa
                 "FOREIGN KEY (" + MovieEntry.COLUMN_MOVIE_ID + ") REFERENCES " +

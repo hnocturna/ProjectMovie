@@ -9,29 +9,40 @@ import android.os.Parcelable;
  */
 
 public class Movie implements Parcelable {
+    private long movieId;
+
     private String title;
     private String backdropPath;
-    private String userRating;
     private String posterPath;
     private String overview;
     private String releaseDate;
+    private String trailerPath;
+
+    private double popularity;
+    private double userRating;
+
+    private int[] genreIds;
+
     private Bitmap poster;
     private Bitmap backdrop;
 
-    public Movie(String title, String overview, String releaseDate, String userRating, String posterPath, String backdropPath) {
+    public Movie(long movieId, String title, String overview, String releaseDate, double userRating, double popularity, String posterPath, String backdropPath, int[] genreIds) {
+        this.movieId = movieId;
         this.title = title;
         this.overview = overview;
         this.releaseDate = releaseDate;
         this.userRating = userRating;
+        this.popularity = popularity;
         this.posterPath = posterPath;
         this.backdropPath = backdropPath;
+        this.genreIds = genreIds;
     }
 
     public void addBackdropPath(String backdropPath) {
         this.backdropPath = backdropPath;
     }
 
-    public void addUserRating(String userRating) {
+    public void addUserRating(double userRating) {
         this.userRating = userRating;
     }
 
@@ -55,6 +66,14 @@ public class Movie implements Parcelable {
         this.backdrop = backdrop;
     }
 
+    public void addTrailerPath(String trailerPath) {
+        this.trailerPath = trailerPath;
+    }
+
+    public long getId() {
+        return movieId;
+    }
+
     public String getTitle() {
         return title;
     }
@@ -63,8 +82,20 @@ public class Movie implements Parcelable {
         return backdropPath;
     }
 
-    public String getUserRating() {
+    public String getTrailerPath() {
+        return trailerPath;
+    }
+
+    public double getUserRating() {
         return userRating;
+    }
+
+    public double getPopularity() {
+        return popularity;
+    }
+
+    public int[] getGenreIds() {
+        return genreIds;
     }
 
     public String getPosterPath() {
@@ -91,7 +122,7 @@ public class Movie implements Parcelable {
         this.title = in.readString();
         this.overview = in.readString();
         this.releaseDate = in.readString();
-        this.userRating = in.readString();
+        this.userRating = in.readDouble();
         this.backdropPath = in.readString();
         this.posterPath = in.readString();
         // this.poster = (Bitmap) in.readValue(Bitmap.class.getClassLoader());
@@ -102,7 +133,7 @@ public class Movie implements Parcelable {
         dest.writeString(title);
         dest.writeString(overview);
         dest.writeString(releaseDate);
-        dest.writeString(userRating);
+        dest.writeDouble(userRating);
         dest.writeString(backdropPath);
         dest.writeString(posterPath);
         // dest.writeValue(poster);

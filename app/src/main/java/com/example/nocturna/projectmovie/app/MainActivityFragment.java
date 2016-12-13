@@ -32,7 +32,7 @@ import com.example.nocturna.projectmovie.app.data.MovieContract;
 public class MainActivityFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
     String LOG_TAG = MainActivityFragment.class.getSimpleName();
     // Member variables
-    private MoviePosterAdapter mMoviePosterAdapter;
+    // private MoviePosterAdapter mMoviePosterAdapter;
     private Movie[] movieArray;                                 // Array of movies that need to be loaded --deprecated?
     private int mCursorPosition;                                // Holds the position of the Cursor to be used by the CursorLoader and the MoviePosterAdapter
     private GridView mGridView;                                 // GridView of the posters
@@ -55,7 +55,6 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
         inflater.inflate(R.menu.menu_main_fragment, menu);
         MenuItem item = menu.findItem(R.id.action_sort);
         item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
-        Log.v(LOG_TAG, "TEST");
     }
 
     @Override
@@ -115,7 +114,7 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
                         );
                         editor.commit();
 
-                        FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
+                        FetchMoviesTask fetchMoviesTask = new FetchMoviesTask(getActivity());
                         fetchMoviesTask.execute();
 
                     } else if (sortRadioGroup.getCheckedRadioButtonId() == R.id.radio_top) {
@@ -125,7 +124,7 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
                         );
                         editor.commit();
 
-                        FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
+                        FetchMoviesTask fetchMoviesTask = new FetchMoviesTask(getActivity());
                         fetchMoviesTask.execute();
                     }
                     dialog.dismiss();
@@ -145,8 +144,8 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
 
         // Select the GridView and attach the MoviePosterAdapter custom made for the posters
         GridView gridView = (GridView) rootView.findViewById(R.id.movie_grid);
-        mMoviePosterAdapter = new MoviePosterAdapter(getActivity(), new Movie[0]);
-        gridView.setAdapter(mMoviePosterAdapter);
+        // mMoviePosterAdapter = new MoviePosterAdapter(getActivity(), null, 0);
+        // gridView.setAdapter(mMoviePosterAdapter);
 
         // Set onClickItemListener so clicking a poster will lead to DetailsActivity
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -169,7 +168,7 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
                         getString(R.string.pref_sort_popular)
                 );
 
-        FetchMoviesTask fetchMoviesTask = new FetchMoviesTask();
+        FetchMoviesTask fetchMoviesTask = new FetchMoviesTask(getActivity());
         fetchMoviesTask.execute();
 
         return rootView;
@@ -202,7 +201,7 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
      */
     @Override
     public void onLoadFinished(Loader loader, Cursor cursor) {
-        mMoviePosterAdapter.swapCursor(cursor);
+        // mMoviePosterAdapter.swapCursor(cursor);
         if (mCursorPosition != GridView.INVALID_POSITION) {
             mGridView.smoothScrollToPosition(mCursorPosition);
         }
@@ -215,7 +214,7 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
      */
     @Override
     public void onLoaderReset(Loader loader) {
-        mMoviePosterAdapter.swapCursor(null);
+        // mMoviePosterAdapter.swapCursor(null);
     }
 
 }
