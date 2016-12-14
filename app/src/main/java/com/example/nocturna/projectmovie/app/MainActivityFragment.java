@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.preference.PreferenceManager;
+import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
@@ -32,7 +33,7 @@ import com.example.nocturna.projectmovie.app.data.MovieContract;
 public class MainActivityFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
     String LOG_TAG = MainActivityFragment.class.getSimpleName();
     // Member variables
-    // private MoviePosterAdapter mMoviePosterAdapter;
+    private MoviePosterAdapter mMoviePosterAdapter;
     private Movie[] movieArray;                                 // Array of movies that need to be loaded --deprecated?
     private int mCursorPosition;                                // Holds the position of the Cursor to be used by the CursorLoader and the MoviePosterAdapter
     private GridView mGridView;                                 // GridView of the posters
@@ -45,7 +46,16 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
     public void onCreate(Bundle savedInstanceState) {
         setHasOptionsMenu(true);
         super.onCreate(savedInstanceState);
+        if (savedInstanceState != null && savedInstanceState.containsKey(SELECTED_KEY)) {
+            mCursorPosition = savedInstanceState.getInt(SELECTED_KEY);
+        }
 
+    }
+
+    @Override
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        getLoaderManager().initLoader(MOVIE_LOADER, null, this);
+        super.onActivityCreated(savedInstanceState);
     }
 
     @Override
@@ -143,12 +153,12 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
         // Select the GridView and attach the MoviePosterAdapter custom made for the posters
-        GridView gridView = (GridView) rootView.findViewById(R.id.movie_grid);
-        // mMoviePosterAdapter = new MoviePosterAdapter(getActivity(), null, 0);
-        // gridView.setAdapter(mMoviePosterAdapter);
+        mGridView = (GridView) rootView.findViewById(R.id.movie_grid);
+        mMoviePosterAdapter = new MoviePosterAdapter(getActivity(), null, 0);
+        mGridView.setAdapter(mMoviePosterAdapter);
 
         // Set onClickItemListener so clicking a poster will lead to DetailsActivity
-        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        mGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 // Start the DetailsActivity by passing the selected Movie object as an Extra in the
@@ -186,7 +196,7 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
         return new CursorLoader(
                 getActivity(),
                 moviesUri,
-                new String[] {MovieContract.MovieEntry.COLUMN_POSTER}, // The main screen only shows posters
+                new String[] {MovieContract.MovieEntry._ID, MovieContract.MovieEntry.COLUMN_POSTER}, // The main screen only shows posters
                 null,
                 null,
                 null
@@ -201,7 +211,7 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
      */
     @Override
     public void onLoadFinished(Loader loader, Cursor cursor) {
-        // mMoviePosterAdapter.swapCursor(cursor);
+        mMoviePosterAdapter.swapCursor(cursor);
         if (mCursorPosition != GridView.INVALID_POSITION) {
             mGridView.smoothScrollToPosition(mCursorPosition);
         }
@@ -214,7 +224,7 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
      */
     @Override
     public void onLoaderReset(Loader loader) {
-        // mMoviePosterAdapter.swapCursor(null);
+        mMoviePosterAdapter.swapCursor(null);
     }
 
 }

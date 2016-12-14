@@ -34,8 +34,8 @@ public class MoviePosterAdapter extends CursorAdapter {
     public MoviePosterAdapter(Context context, Cursor cursor, int flags) {
         super(context, cursor, flags);
         // Instantiate the member arrays with the number of rows returned by the cursor
-        int cursorCount = cursor.getCount();
-        moviePosters = new Bitmap[cursorCount];
+
+
     }
 
     /**
@@ -47,10 +47,19 @@ public class MoviePosterAdapter extends CursorAdapter {
      */
     @Override
     public View newView(Context context, Cursor cursor, ViewGroup parent) {
-        View view = LayoutInflater.from(context).inflate(R.layout.list_item_movieposter, parent, true);
+        View view = LayoutInflater.from(context).inflate(R.layout.list_item_movieposter, parent, false);
         ViewHolder viewHolder = new ViewHolder(view);
         view.setTag(viewHolder);
         return view;
+    }
+
+    @Override
+    public Cursor swapCursor(Cursor newCursor) {
+        if (newCursor != null) {
+            int cursorCount = newCursor.getCount();
+            moviePosters = new Bitmap[cursorCount];
+        }
+        return super.swapCursor(newCursor);
     }
 
     @Override
@@ -62,7 +71,11 @@ public class MoviePosterAdapter extends CursorAdapter {
         ImageView imageView = viewHolder.posterView;
 
         if (moviePosters[cursorPosition] == null) {
-            Object[] params = new Object[] {posterPath, cursorPosition};
+            Object[] params = new Object[] {posterPath, cursorPosition, imageView};
+            FetchPosterTask fetchPosterTask = new FetchPosterTask();
+            fetchPosterTask.execute(params);
+        } else {
+            imageView.setImageBitmap(moviePosters[cursorPosition]);
         }
     }
 
@@ -74,7 +87,7 @@ public class MoviePosterAdapter extends CursorAdapter {
         public final ImageView posterView;
 
         public ViewHolder(View view) {
-            posterView = (ImageView) view.findViewById(R.id.detail_poster_image);
+            posterView = (ImageView) view.findViewById(R.id.list_poster_image);
         }
     }
 
@@ -83,10 +96,12 @@ public class MoviePosterAdapter extends CursorAdapter {
 
         @Override
         protected Bitmap doInBackground(Object... params) {
+            Log.v(LOG_TAG, "FetchPosterTask begin");
             // Retrieve the variables passed
             String posterPath = (String) params[0];         // Path of the poster
             int position = (Integer) params[1];             // The position of the cursor
             this.posterView = (ImageView) params[2];        // ImageView requiring poster
+            Log.v(LOG_TAG, "PosterView: " + posterView);
             Bitmap poster = null;                           // Bitmap to be passed to onPostExecute
 
             if (posterPath.isEmpty()) {
@@ -125,7 +140,7 @@ public class MoviePosterAdapter extends CursorAdapter {
 
         @Override
         protected void onPostExecute(Bitmap bitmap) {
-            posterView.setImageBitmap(bitmap);
+            this.posterView.setImageBitmap(bitmap);
         }
     }
 }

@@ -17,7 +17,7 @@ import com.example.nocturna.projectmovie.app.data.MovieContract.LinkEntry;
 
 public class MovieDbHelper extends SQLiteOpenHelper {
     // Set up constants
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
     // Name of the database file in the phone's directory
     public static final String DATABASE_NAME = "movies.db";
 
@@ -34,6 +34,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
         // Table storing a movie and all their unique attributes as a single row
         final String SQL_CREATE_MOVIES_TABLE = "CREATE TABLE " + MovieEntry.TABLE_NAME + " (" +
                 // Since MovieId is unique, it will be used as the primary key
+                " " + MovieEntry._ID + " INTEGER AUTO INCREMENT, " +
                 MovieEntry.COLUMN_MOVIE_ID + " INTEGER NOT NULL PRIMARY KEY, " +
                 MovieEntry.COLUMN_TITLE + " TEXT UNIQUE NOT NULL, " +
                 MovieEntry.COLUMN_OVERVIEW + " TEXT NOT NULL, " +
@@ -75,10 +76,12 @@ public class MovieDbHelper extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // All data is queried from the web so there is no need to preserve the data on upgrade.
-        db.execSQL("DROP TABLE IF EXISTS " + MovieEntry.TABLE_NAME);
-        db.execSQL("DROP TABLE IF EXISTS " + GenreEntry.TABLE_NAME);
-        db.execSQL("DROP TABLE IF EXISTS " + LinkEntry.TABLE_NAME);
-        onCreate(db);
+        if (newVersion > oldVersion) {
+            // All data is queried from the web so there is no need to preserve the data on upgrade.
+            db.execSQL("DROP TABLE IF EXISTS " + MovieEntry.TABLE_NAME);
+            db.execSQL("DROP TABLE IF EXISTS " + GenreEntry.TABLE_NAME);
+            db.execSQL("DROP TABLE IF EXISTS " + LinkEntry.TABLE_NAME);
+            onCreate(db);
+        }
     }
 }

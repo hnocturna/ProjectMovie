@@ -21,10 +21,10 @@
         android:id="@+id/movie_grid"
         />
 
-    <ImageView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/debug_image_view"
-        />
+    <!--<ImageView-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--android:id="@+id/debug_image_view"-->
+        <!--/>-->
 
 </FrameLayout>
