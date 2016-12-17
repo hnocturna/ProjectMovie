@@ -103,8 +103,10 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
 
             if (cursor.moveToFirst()) {
                 // If cursor returns a row, then movie already exists in database and it can be skipped
+                cursor.close();
                 continue;
             }
+            cursor.close();
 
             // Prepend the base URL for the poster and the backdrop before adding it to the
             // ContentValues
@@ -267,7 +269,7 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
             String releaseDate = movie.getReleaseDate();
             String backdropPath = movie.getBackdropPath();
             String posterPath = movie.getPosterPath();
-            String trailerPath = movie.getTrailerPath();
+            // String trailerPath = movie.getTrailerPath();
             double popularity = movie.getPopularity();
             double userRating = movie.getUserRating();
 
@@ -279,7 +281,7 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
             movieValues.put(MovieEntry.COLUMN_RELEASE_DATE, releaseDate);
             movieValues.put(MovieEntry.COLUMN_BACKDROP, backdropPath);
             movieValues.put(MovieEntry.COLUMN_POSTER, posterPath);
-            movieValues.put(MovieEntry.COLUMN_TRAILER, trailerPath);
+            // movieValues.put(MovieEntry.COLUMN_TRAILER, trailerPath);
             movieValues.put(MovieEntry.COLUMN_POPULARITY, popularity);
             movieValues.put(MovieEntry.COLUMN_RATING, userRating);
 
@@ -441,7 +443,7 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
             Log.v(LOG_TAG, rows + " rows added to Link Table");
 
             // Add trailer paths to each movie object and then insert the data
-            rows = addTrailerPathToMovie(movieArrayFromJson);
+            rows = addMovies(movieArrayFromJson);
             Log.v(LOG_TAG, rows + " rows added to Movies Table");
 
             // Get genre data and insert the data if it hasn't been added before
@@ -505,17 +507,4 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
         return null;
     }
 
-    @Override
-    protected void onPostExecute(Movie[] moviesArray) {
-        // Add the movies to the MoviePosterAdapter attached to the GridView
-        if (moviesArray == null) {
-            Log.d(LOG_TAG, "No movies extracted from JSON");
-            return;
-        }
-
-        for (Movie movie : moviesArray) {
-//            mMovieAdapter.add(movie);
-        }
-        return;
-    }
 }

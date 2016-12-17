@@ -33,9 +33,6 @@ public class MoviePosterAdapter extends CursorAdapter {
 
     public MoviePosterAdapter(Context context, Cursor cursor, int flags) {
         super(context, cursor, flags);
-        // Instantiate the member arrays with the number of rows returned by the cursor
-
-
     }
 
     /**
@@ -47,14 +44,18 @@ public class MoviePosterAdapter extends CursorAdapter {
      */
     @Override
     public View newView(Context context, Cursor cursor, ViewGroup parent) {
+        if (cursor == null) {
+            return null;
+        }
         View view = LayoutInflater.from(context).inflate(R.layout.list_item_movieposter, parent, false);
-        ViewHolder viewHolder = new ViewHolder(view);
+        ViewHolder viewHolder = new ViewHolder(view, cursor.getPosition());
         view.setTag(viewHolder);
         return view;
     }
 
     @Override
     public Cursor swapCursor(Cursor newCursor) {
+        // Instantiate the Bitmap array with the number of rows returned by the cursor
         if (newCursor != null) {
             int cursorCount = newCursor.getCount();
             moviePosters = new Bitmap[cursorCount];
@@ -64,6 +65,9 @@ public class MoviePosterAdapter extends CursorAdapter {
 
     @Override
     public void bindView(View view, Context context, Cursor cursor) {
+        if (moviePosters == null) {
+            return;
+        }
         // Variables to be passed to the FetchPosterTask
         int cursorPosition = cursor.getPosition();
         String posterPath = cursor.getString(cursor.getColumnIndex(MovieContract.MovieEntry.COLUMN_POSTER));
@@ -71,9 +75,10 @@ public class MoviePosterAdapter extends CursorAdapter {
         ImageView imageView = viewHolder.posterView;
 
         if (moviePosters[cursorPosition] == null) {
-            Object[] params = new Object[] {posterPath, cursorPosition, imageView};
+            Object[] params = new Object[] {posterPath, cursorPosition, viewHolder};
             FetchPosterTask fetchPosterTask = new FetchPosterTask();
             fetchPosterTask.execute(params);
+
         } else {
             imageView.setImageBitmap(moviePosters[cursorPosition]);
         }
@@ -85,24 +90,31 @@ public class MoviePosterAdapter extends CursorAdapter {
      */
     public static class ViewHolder {
         public final ImageView posterView;
+        public final int position;
 
-        public ViewHolder(View view) {
+        public ViewHolder(View view, int position) {
             posterView = (ImageView) view.findViewById(R.id.list_poster_image);
+            this.position = position;
         }
     }
 
+    /**
+     * AsyncTask for downloading poster images in background and loading them into the ImageView
+     * being inflated into the GridView
+     */
     private class FetchPosterTask extends AsyncTask<Object, Void, Bitmap> {
-        ImageView posterView;
+        ViewHolder mViewHolder;
+        int position;
 
         @Override
         protected Bitmap doInBackground(Object... params) {
-            Log.v(LOG_TAG, "FetchPosterTask begin");
             // Retrieve the variables passed
             String posterPath = (String) params[0];         // Path of the poster
-            int position = (Integer) params[1];             // The position of the cursor
-            this.posterView = (ImageView) params[2];        // ImageView requiring poster
-            Log.v(LOG_TAG, "PosterView: " + posterView);
-            Bitmap poster = null;                           // Bitmap to be passed to onPostExecute
+            this.position = (Integer) params[1];             // The position of the cursor
+            this.mViewHolder = (ViewHolder) params[2];      // ImageView requiring poster
+
+            // Poster is defined outside of the try block so that it can be passed to the onPostExecute
+            Bitmap poster = null;
 
             if (posterPath.isEmpty()) {
                 // No URL passed. Nothing to do.
@@ -121,7 +133,6 @@ public class MoviePosterAdapter extends CursorAdapter {
                 // Convert to an input stream and utilize BitmapFactory to output a bitmap
                 InputStream bitmapStream = posterConnection.getInputStream();
                 poster = BitmapFactory.decodeStream(bitmapStream);
-
                 moviePosters[position] = poster;
             } catch (MalformedURLException e) {
                 // Error if URL is incorrect
@@ -131,6 +142,7 @@ public class MoviePosterAdapter extends CursorAdapter {
                 Log.d(LOG_TAG, "Error ", e);
                 e.printStackTrace();
             } finally {
+                // Close any active connections
                 if (posterConnection != null) {
                     posterConnection.disconnect();
                 }
@@ -140,7 +152,11 @@ public class MoviePosterAdapter extends CursorAdapter {
 
         @Override
         protected void onPostExecute(Bitmap bitmap) {
-            this.posterView.setImageBitmap(bitmap);
+            // Load the bitmap into the ImageView
+            if (position == mViewHolder.position) {
+                mViewHolder.posterView.setImageBitmap(bitmap);
+            }
+
         }
     }
 }

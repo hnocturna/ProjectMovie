@@ -1,5 +1,6 @@
 package com.example.nocturna.projectmovie.app;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -13,6 +14,7 @@ import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
+import android.util.MalformedJsonException;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -37,13 +39,31 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
     private Movie[] movieArray;                                 // Array of movies that need to be loaded --deprecated?
     private int mCursorPosition;                                // Holds the position of the Cursor to be used by the CursorLoader and the MoviePosterAdapter
     private GridView mGridView;                                 // GridView of the posters
+    private boolean runOnce = true;
 
     // Constants
     private static final int MOVIE_LOADER = 0;                  // ID of the CursorLoader for the movies
     private static final String SELECTED_KEY = "SELECTION";     // TODO: Fill this in
 
+    // Column Projection
+    String[] MOVIE_COLUMNS = new String[] {
+            MovieContract.MovieEntry._ID,
+            MovieContract.MovieEntry.COLUMN_MOVIE_ID,
+            MovieContract.MovieEntry.COLUMN_POSTER,
+            MovieContract.MovieEntry.COLUMN_RATING,
+            MovieContract.MovieEntry.COLUMN_POPULARITY
+    };
+
+    // Column indices. Tied to MOVIE_COLUMNS
+    static final int COL_ID = 0;
+    static final int COL_MOVIE_ID = 1;
+    static final int COL_POSTER = 2;
+    static final int COL_RATING = 3;
+    static final int COL_POPULARITY = 4;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
+
         setHasOptionsMenu(true);
         super.onCreate(savedInstanceState);
         if (savedInstanceState != null && savedInstanceState.containsKey(SELECTED_KEY)) {
@@ -82,10 +102,7 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
                     .setTitle(getString(R.string.sort_dialog_title))
                     .setView(R.layout.sort_dialog)
                     .create();
-//            final Dialog dialog = new Dialog(getActivity());
-//            dialog.setTitle(getString(R.string.sort_dialog_title));
-//            dialog.requestWindowFeature(Window.FEATURE_CUSTOM_TITLE);
-//            dialog.setContentView(R.layout.sort_dialog);
+
             dialog.show();
 
             final RadioGroup sortRadioGroup = (RadioGroup) dialog.findViewById(R.id.sort_dialog_radiogroup);
@@ -115,7 +132,6 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
                         dialog.dismiss();
                     } else if (sortRadioGroup.getCheckedRadioButtonId() == R.id.radio_top &&
                             sortMode.equals(getString(R.string.pref_sort_top))) {
-
                         dialog.dismiss();
                     } else if (sortRadioGroup.getCheckedRadioButtonId() == R.id.radio_popular) {
                         editor.putString(
@@ -123,19 +139,19 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
                                 getString(R.string.pref_sort_popular)
                         );
                         editor.commit();
-
-                        FetchMoviesTask fetchMoviesTask = new FetchMoviesTask(getActivity());
-                        fetchMoviesTask.execute();
-
+                        mMoviePosterAdapter = new MoviePosterAdapter(getActivity(), null, 0);
+                        mGridView.setAdapter(mMoviePosterAdapter);
+                        onSortModeChanged();
                     } else if (sortRadioGroup.getCheckedRadioButtonId() == R.id.radio_top) {
                         editor.putString(
                                 getString(R.string.pref_sort_key),
                                 getString(R.string.pref_sort_top)
                         );
                         editor.commit();
+                        mMoviePosterAdapter = new MoviePosterAdapter(getActivity(), null, 0);
+                        mGridView.setAdapter(mMoviePosterAdapter);
+                        onSortModeChanged();
 
-                        FetchMoviesTask fetchMoviesTask = new FetchMoviesTask(getActivity());
-                        fetchMoviesTask.execute();
                     }
                     dialog.dismiss();
                 }
@@ -144,6 +160,10 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public void onSortModeChanged() {
+        getLoaderManager().restartLoader(MOVIE_LOADER, null, this);
     }
 
     @Override
@@ -161,28 +181,29 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
         mGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                // Start the DetailsActivity by passing the selected Movie object as an Extra in the
-                // Intent
-                Movie selectedMovie = movieArray[position];
+                // Retrieve the movieId
+                Cursor cursor = (Cursor) mMoviePosterAdapter.getItem(position);
+                long movieId = cursor.getLong(COL_MOVIE_ID);
 
-                Intent intent = new Intent(getActivity(), DetailsActivity.class)
-                    .putExtra(MainActivity.EXTRA_MOVIE, selectedMovie);
+                // Generate the URI for the row pointing to the movie
+                Uri movieUri = MovieContract.MovieEntry.buildMovieUriFromId(movieId);
+
+                // Start an intent with the URI attached to it to launch the DetailsActivity
+                Intent intent = new Intent(getActivity(), DetailsActivity.class);
+                intent.setData(movieUri);
                 startActivity(intent);
             }
         });
 
-        // Run the AsyncTask to download and parse the movie data from TheMovieDB.org
-        String sortMode = PreferenceManager.getDefaultSharedPreferences(getActivity())
-                .getString(
-                        getString(R.string.pref_sort_key),
-                        getString(R.string.pref_sort_popular)
-                );
 
-        FetchMoviesTask fetchMoviesTask = new FetchMoviesTask(getActivity());
-        fetchMoviesTask.execute();
 
         return rootView;
     }
+     private void runOnce() {
+         // Run the AsyncTask to download and parse the movie data from TheMovieDB.org
+         FetchMoviesTask fetchMoviesTask = new FetchMoviesTask(getActivity());
+         fetchMoviesTask.execute();
+     }
 
     /**
      * Method called to create the CursorLoader that will cycle through the data being queried
@@ -192,14 +213,33 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
      */
     @Override
     public Loader onCreateLoader(int id, Bundle args) {
+        // Constants
+        Context context = getActivity();
         Uri moviesUri = MovieContract.MovieEntry.CONTENT_URI;
+
+        // Sort mode: by popularity or rating
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String sortMode = prefs.getString(
+                context.getString(R.string.pref_sort_key),
+                context.getString(R.string.pref_sort_popular)
+        );
+
+        // How to sort the rows of the cursor
+        String sortOrder = null;
+        if (sortMode.equals(context.getString(R.string.pref_sort_popular))) {
+            sortOrder = MovieContract.MovieEntry.COLUMN_POPULARITY + " DESC";
+        } else if (sortMode.equals(context.getString(R.string.pref_sort_top))) {
+            sortOrder = MovieContract.MovieEntry.COLUMN_RATING + " DESC";
+        } else {
+            throw new UnsupportedOperationException("Unknown sort method: " + sortMode);
+        }
         return new CursorLoader(
                 getActivity(),
                 moviesUri,
-                new String[] {MovieContract.MovieEntry._ID, MovieContract.MovieEntry.COLUMN_POSTER}, // The main screen only shows posters
+                MOVIE_COLUMNS,
                 null,
                 null,
-                null
+                sortOrder
         );
     }
 
@@ -214,6 +254,11 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
         mMoviePosterAdapter.swapCursor(cursor);
         if (mCursorPosition != GridView.INVALID_POSITION) {
             mGridView.smoothScrollToPosition(mCursorPosition);
+        }
+
+        if (runOnce) {
+            runOnce();
+            runOnce = false;
         }
     }
 
