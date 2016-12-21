@@ -22,6 +22,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,6 +34,7 @@ import com.example.nocturna.projectmovie.app.data.MovieContract.GenreEntry;
 class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
     // Member variables
     Context mContext;
+    MoviePosterAdapter mMoviePosterAdapter;
     // MoviePosterAdapter mMovieAdapter;
 
     // Constants
@@ -40,14 +42,14 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
     final String API_PARAM = "api_key";
     final String API_KEY = BuildConfig.API_KEY;
 
-    public FetchMoviesTask(Context context) {
+    public FetchMoviesTask(Context context, MoviePosterAdapter moviePosterAdapter) {
         mContext = context;
-        // mMovieAdapter = moviePosterAdapter;
+        mMoviePosterAdapter = moviePosterAdapter;
     }
 
     @Override
-    protected void onPreExecute() {
-        super.onPreExecute();
+    protected void onPostExecute(Movie[] movies) {
+        mMoviePosterAdapter.notifyDataSetChanged();
     }
 
     private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
@@ -89,7 +91,7 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
             String overview = movieJsonObject.getString(TMD_OVERVIEW);
             double rating = movieJsonObject.getDouble(TMD_RATING);
             double popularity = movieJsonObject.getDouble(TMD_POPULARITY);
-            String releaseDate = movieJsonObject.getString(TMD_RELEASE_DATE);
+            String releaseDateStr = movieJsonObject.getString(TMD_RELEASE_DATE);
             String backdropPath = movieJsonObject.getString(TMD_BACKDROP_PATH);
 
             // Check if movie already exists in database
@@ -107,6 +109,9 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
                 continue;
             }
             cursor.close();
+
+            // Convert the date format to long so that it can be stored in the database
+            long releaseDate = Utility.dateToLong(releaseDateStr);
 
             // Prepend the base URL for the poster and the backdrop before adding it to the
             // ContentValues
@@ -266,7 +271,7 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
             long id = movie.getId();
             String title = movie.getTitle();
             String overview = movie.getOverview();
-            String releaseDate = movie.getReleaseDate();
+            long releaseDate = movie.getReleaseDate();
             String backdropPath = movie.getBackdropPath();
             String posterPath = movie.getPosterPath();
             // String trailerPath = movie.getTrailerPath();
@@ -373,6 +378,8 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
 
     @Override
     protected Movie[] doInBackground(Void... params) {
+        long startTime = System.currentTimeMillis();
+        Log.v(LOG_TAG, "In doInBackground");
         if (params == null) {
             return null;
         }
@@ -433,18 +440,30 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
             }
             movieJsonStr = buffer.toString();
 
+            long time = (System.currentTimeMillis() - startTime);
+            Log.v(LOG_TAG, "doInBackground: Movie JSON Objects downloaded. Time elapsed: " + time + "ms");
+
             // Store the retrieved movies as an array. Images will be downloaded in the CursorAdapter
             // on-the-fly. Hopefully only once as to prevent the constant loading of images as the
             // screen is scrolled.
             Movie[] movieArrayFromJson = getMovieDataFromString(movieJsonStr);
 
+            time = (System.currentTimeMillis() - startTime);
+            Log.v(LOG_TAG, "JSON String converted to Movie objects. Time elapsed: " + time + "ms");
+
             // Add data to the Link Table
             int rows = addMoviesAndGenres(movieArrayFromJson);
             Log.v(LOG_TAG, rows + " rows added to Link Table");
 
+            time = (System.currentTimeMillis() - startTime);
+            Log.v(LOG_TAG, "Movies added to Link Table. Time elapsed: " + time + "ms");
+
             // Add trailer paths to each movie object and then insert the data
             rows = addMovies(movieArrayFromJson);
             Log.v(LOG_TAG, rows + " rows added to Movies Table");
+
+            time = (System.currentTimeMillis() - startTime);
+            Log.v(LOG_TAG, "Movies added to Movie Table. Time elapsed: " + time + "ms");
 
             // Get genre data and insert the data if it hasn't been added before
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
@@ -459,6 +478,9 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
                     editor.commit();
                 }
             }
+
+            time = (System.currentTimeMillis() - startTime);
+            Log.v(LOG_TAG, "Genres added to Genre Table. Time elapsed: " + time + "ms");
 
 //                try {
 //                    // Open a connection to the poster image.
@@ -501,9 +523,7 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
                     Log.d(LOG_TAG, "Unable to close stream", e);
                 }
             }
-
         }
-
         return null;
     }
 

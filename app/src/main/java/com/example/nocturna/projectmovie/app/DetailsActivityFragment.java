@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v4.app.Fragment;
@@ -16,6 +17,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -69,6 +71,8 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
     ImageView posterImage;
     ImageView backdropImage;
 
+    LinearLayout backgroundLayout;
+
     public DetailsActivityFragment() {
     }
 
@@ -85,6 +89,7 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
         releaseText = (TextView) rootView.findViewById(R.id.detail_release_text);
         posterImage = (ImageView) rootView.findViewById(R.id.detail_poster_image);
         backdropImage = (ImageView) rootView.findViewById(R.id.detail_backdrop_image);
+        backgroundLayout = (LinearLayout) rootView.findViewById(R.id.detail_subtitle_background);
 
         return rootView;
     }
@@ -122,19 +127,23 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
         String title = cursor.getString(COL_TITLE);
         String overview = cursor.getString(COL_OVERVIEW);
         double rating = cursor.getDouble(COL_RATING);
-        String releaseDate = cursor.getString(COL_RELEASE_DATE);
+        long releaseDate = cursor.getLong(COL_RELEASE_DATE);
         String posterPath = cursor.getString(COL_POSTER);
         String backdropPath = cursor.getString(COL_BACKDROP);
         // String trailerPath = cursor.getString(COL_TRAILER);
 
-        String[] params = new String[] {posterPath, backdropPath};
+        // Convert release date into String format
+        Log.v(LOG_TAG, "Release Date in ms: " + releaseDate);
+        String releaseDateStr = Utility.longToDate(releaseDate);
+
+        String[] params = new String[] {posterPath, backdropPath, title, overview, Double.toString(rating), releaseDateStr};
         FetchImageTask fetchImageTask = new FetchImageTask();
         fetchImageTask.execute(params);
 
-        titleText.setText(title);
-        overviewText.setText(overview);
-        ratingText.setText(Double.toString(rating));
-        releaseText.setText(releaseDate);
+//        titleText.setText(title);
+//        overviewText.setText(overview);
+//        ratingText.setText(Double.toString(rating));
+//        releaseText.setText(releaseDate);
 
     }
 
@@ -145,6 +154,10 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
 
     private class FetchImageTask extends AsyncTask<String, Void, Bitmap[]> {
         final String LOG_TAG = FetchImageTask.class.getSimpleName();
+        String title;
+        String overview;
+        String rating;
+        String releaseDate;
 
         @Override
         protected Bitmap[] doInBackground(String... params) {
@@ -157,6 +170,10 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
             // Retrieve the URLs passed into the task
             String posterStr = params[0];
             String backdropStr = params[1];
+            this.title = params[2];
+            this.overview = params[3];
+            this.rating = params[4];
+            this.releaseDate = params[5];
 
             // Array to pass to onPostExecute
             Bitmap[] images = new Bitmap[2];
@@ -216,12 +233,18 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
         @Override
         protected void onPostExecute(Bitmap[] images) {
             if (images[0] != null) {
-                posterImage.setImageBitmap(images[0]);
+                // posterImage.setImageBitmap(images[0]);
             }
 
             if (images[1] != null) {
-                backdropImage.setAlpha(175);
+                // backdropImage.setAlpha(175);
                 backdropImage.setImageBitmap(images[1]);
+                int backgroundColor = Utility.getDominantColor(images[1]);
+                backgroundLayout.setBackgroundColor(backgroundColor);
+                titleText.setText(title);
+                overviewText.setText(overview);
+                ratingText.setText(rating);
+                releaseText.setText(releaseDate);
                 // ScrollView scrollView = (ScrollView) getView().findViewById(R.id.detail_scroll_view);
                 // scrollView.scrollTo(0, titleText.getTop());
             }

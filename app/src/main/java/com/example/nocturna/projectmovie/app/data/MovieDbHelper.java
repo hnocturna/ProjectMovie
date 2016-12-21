@@ -17,7 +17,7 @@ import com.example.nocturna.projectmovie.app.data.MovieContract.LinkEntry;
 
 public class MovieDbHelper extends SQLiteOpenHelper {
     // Set up constants
-    private static final int DATABASE_VERSION = 2;
+    private static final int DATABASE_VERSION = 3;
     // Name of the database file in the phone's directory
     public static final String DATABASE_NAME = "movies.db";
 
@@ -40,7 +40,7 @@ public class MovieDbHelper extends SQLiteOpenHelper {
                 MovieEntry.COLUMN_OVERVIEW + " TEXT NOT NULL, " +
                 MovieEntry.COLUMN_RATING + " REAL NOT NULL, " +
                 MovieEntry.COLUMN_POPULARITY + " REAL NOT NULL, " +
-                MovieEntry.COLUMN_RELEASE_DATE + " TEXT NOT NULL, " +
+                MovieEntry.COLUMN_RELEASE_DATE + " REAL NOT NULL, " +
                 MovieEntry.COLUMN_BACKDROP + " TEXT NOT NULL, " +
                 MovieEntry.COLUMN_POSTER + " TEXT NOT NULL, " +
                 MovieEntry.COLUMN_TRAILER + " TEXT, " +

@@ -15,8 +15,9 @@ public class Movie implements Parcelable {
     private String backdropPath;
     private String posterPath;
     private String overview;
-    private String releaseDate;
     private String trailerPath;
+
+    private long releaseDate;
 
     private double popularity;
     private double userRating;
@@ -26,7 +27,7 @@ public class Movie implements Parcelable {
     private Bitmap poster;
     private Bitmap backdrop;
 
-    public Movie(long movieId, String title, String overview, String releaseDate, double userRating, double popularity, String posterPath, String backdropPath, int[] genreIds) {
+    public Movie(long movieId, String title, String overview, long releaseDate, double userRating, double popularity, String posterPath, String backdropPath, int[] genreIds) {
         this.movieId = movieId;
         this.title = title;
         this.overview = overview;
@@ -54,7 +55,7 @@ public class Movie implements Parcelable {
         this.overview = overview;
     }
 
-    public void addReleaseDate(String releaseDate) {
+    public void addReleaseDate(long releaseDate) {
         this.releaseDate = releaseDate;
     }
 
@@ -106,7 +107,7 @@ public class Movie implements Parcelable {
         return overview;
     }
 
-    public String getReleaseDate() {
+    public long getReleaseDate() {
         return releaseDate;
     }
 
@@ -121,7 +122,7 @@ public class Movie implements Parcelable {
     public Movie(Parcel in) {
         this.title = in.readString();
         this.overview = in.readString();
-        this.releaseDate = in.readString();
+        this.releaseDate = in.readLong();
         this.userRating = in.readDouble();
         this.backdropPath = in.readString();
         this.posterPath = in.readString();
@@ -132,7 +133,7 @@ public class Movie implements Parcelable {
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(title);
         dest.writeString(overview);
-        dest.writeString(releaseDate);
+        dest.writeLong(releaseDate);
         dest.writeDouble(userRating);
         dest.writeString(backdropPath);
         dest.writeString(posterPath);

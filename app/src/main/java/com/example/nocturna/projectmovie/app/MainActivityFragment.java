@@ -138,18 +138,18 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
                                 getString(R.string.pref_sort_key),
                                 getString(R.string.pref_sort_popular)
                         );
-                        editor.commit();
-                        mMoviePosterAdapter = new MoviePosterAdapter(getActivity(), null, 0);
-                        mGridView.setAdapter(mMoviePosterAdapter);
+                        editor.apply();
+                        // mMoviePosterAdapter = new MoviePosterAdapter(getActivity(), null, 0);
+                        // mGridView.setAdapter(mMoviePosterAdapter);
                         onSortModeChanged();
                     } else if (sortRadioGroup.getCheckedRadioButtonId() == R.id.radio_top) {
                         editor.putString(
                                 getString(R.string.pref_sort_key),
                                 getString(R.string.pref_sort_top)
                         );
-                        editor.commit();
-                        mMoviePosterAdapter = new MoviePosterAdapter(getActivity(), null, 0);
-                        mGridView.setAdapter(mMoviePosterAdapter);
+                        editor.apply();
+                        // mMoviePosterAdapter = new MoviePosterAdapter(getActivity(), null, 0);
+                        // mGridView.setAdapter(mMoviePosterAdapter);
                         onSortModeChanged();
 
                     }
@@ -162,8 +162,45 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * Helper method for swapping cursors when the sorting mode changes by querying the database
+     * for a new cursor with the changed sort method and then utilizing
+     * {@link android.support.v4.widget.CursorAdapter#swapCursor} to update the views within the
+     * {@link MoviePosterAdapter}
+     */
     public void onSortModeChanged() {
-        getLoaderManager().restartLoader(MOVIE_LOADER, null, this);
+        // Variables
+        Context context = getActivity();
+        Uri moviesUri = MovieContract.MovieEntry.CONTENT_URI;
+
+        // Sort mode: by popularity or rating
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String sortMode = prefs.getString(
+                context.getString(R.string.pref_sort_key),
+                context.getString(R.string.pref_sort_popular)
+        );
+
+        // How to sort the rows of the cursor
+        String sortOrder = null;
+        if (sortMode.equals(context.getString(R.string.pref_sort_popular))) {
+            sortOrder = MovieContract.MovieEntry.COLUMN_POPULARITY + " DESC";
+        } else if (sortMode.equals(context.getString(R.string.pref_sort_top))) {
+            sortOrder = MovieContract.MovieEntry.COLUMN_RATING + " DESC";
+        } else {
+            throw new UnsupportedOperationException("Unknown sort method: " + sortMode);
+        }
+
+        // Get new cursor by querying database
+        Cursor cursor = getActivity().getContentResolver().query(
+                moviesUri,
+                MOVIE_COLUMNS,
+                null,
+                null,
+                sortOrder
+        );
+
+        // Swap cursor to update view
+        mMoviePosterAdapter.swapCursor(cursor);
     }
 
     @Override
@@ -201,7 +238,7 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
     }
      private void runOnce() {
          // Run the AsyncTask to download and parse the movie data from TheMovieDB.org
-         FetchMoviesTask fetchMoviesTask = new FetchMoviesTask(getActivity());
+         FetchMoviesTask fetchMoviesTask = new FetchMoviesTask(getActivity(), mMoviePosterAdapter);
          fetchMoviesTask.execute();
      }
 
@@ -256,10 +293,10 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
             mGridView.smoothScrollToPosition(mCursorPosition);
         }
 
-        if (runOnce) {
-            runOnce();
-            runOnce = false;
-        }
+//        if (runOnce) {
+//            runOnce();
+//            runOnce = false;
+//        }
     }
 
     /**
