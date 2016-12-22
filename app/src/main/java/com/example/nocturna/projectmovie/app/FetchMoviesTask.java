@@ -22,7 +22,6 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.sql.Time;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,7 +37,7 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
     // MoviePosterAdapter mMovieAdapter;
 
     // Constants
-    final String baseUri = "http://api.themoviedb.org/3/movie";
+    final String BASE_URI = "http://api.themoviedb.org/3/movie";
     final String API_PARAM = "api_key";
     final String API_KEY = BuildConfig.API_KEY;
 
@@ -131,92 +130,7 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
         return movieArray;
     }
 
-    private int addTrailerPathToMovie(Movie[] movieArray) throws IOException, JSONException {
-        // Constants
-        final String VIDEOS_PATH = "videos";
-        for (Movie movie : movieArray) {
-            // Set up movieId variable to request trailer URL from TMD
-            long movieId = movie.getId();
-            // Defined outside of try block so it can be closed in the finally block
-            HttpURLConnection urlConnection = null;
-            BufferedReader reader = null;
-            String trailerJsonString;
 
-            // Builds the URI to query the trailer paths
-            Uri builtUri = Uri.parse(baseUri)
-                    .buildUpon()
-                    .appendPath(Long.toString(movieId))
-                    .appendPath(VIDEOS_PATH)
-                    .appendQueryParameter(API_PARAM, API_KEY)
-                    .build();
-
-            URL url = new URL(builtUri.toString());
-            urlConnection = (HttpURLConnection) url.openConnection();
-            urlConnection.setRequestMethod("GET");
-            urlConnection.connect();
-
-            InputStream inputStream = urlConnection.getInputStream();
-            StringBuffer buffer = new StringBuffer();
-            if (inputStream == null) {
-                // Nothing returned, continue to next movie object
-                continue;
-            }
-
-            String line = null;
-
-            reader = new BufferedReader(new InputStreamReader(inputStream));
-            while ((line = reader.readLine()) != null) {
-                buffer.append(line + "\n");
-            }
-
-            if (buffer.length() == 0) {
-                // Nothing read, so unable to continue
-                continue;
-            }
-            trailerJsonString = buffer.toString();
-            getTrailerFromString(movie, trailerJsonString);
-        }
-
-        int rows = addMovies(movieArray);
-        return rows;
-    }
-
-    /**
-     * Adds the trailer from the JSONString for the movie utilizing a YouTube video ID and appending
-     * it to the YouTube watch videos URL, then adds the URL to the movie object
-     * @param movie movie for the corresponding trailer
-     * @param trailerJsonString JSON String containing the trailer ID
-     * @throws JSONException when the String is not a proper JSON object
-     */
-    private void getTrailerFromString(Movie movie, String trailerJsonString) throws JSONException {
-        // Constants
-        final String TRAILER = "Trailer";
-        final String TMD_RESULTS = "results";
-        final String TMD_TRAILER_PATH = "key";
-        final String TMD_TRAILER_TYPE = "type";
-        final String YT_PATH_BASE = "https://www.youtube.com/watch?v=";
-
-        // Holds the trailer path outside of the iteration
-        String trailerPath = "";
-
-        // Convert the String to a JSON Object and retrieve the trailer from the JSON Array
-        JSONObject trailerJson = new JSONObject(trailerJsonString);
-        JSONArray trailerArray = trailerJson.getJSONArray(TMD_RESULTS);
-
-        // Make sure the Trailer ID matches a trailer type video
-        for (int i = 0; i < trailerArray.length(); i++) {
-            if (trailerArray.getJSONObject(i).getString(TMD_TRAILER_TYPE).equals(TRAILER)) {
-                trailerPath = trailerArray.getJSONObject(i).getString(TMD_TRAILER_PATH);
-                break;
-            }
-        }
-
-        // Pre-pend the Youtube video path to the trailer ID to get the full URL of the trailer
-        trailerPath = YT_PATH_BASE + trailerPath;
-
-        // Add the trailer path to the movie
-        movie.addTrailerPath(trailerPath);
-    }
 
     /**
      * Bulk insert all movies and their corresponding genres into the Link Table. Must be done first
@@ -402,7 +316,7 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
             Log.v(LOG_TAG, "Downloading movies. Sorting by: " + sortMode);
 
             // Build the URL using a base Uri and appending on additional parameters
-            Uri builtUri = Uri.parse(baseUri).buildUpon()
+            Uri builtUri = Uri.parse(BASE_URI).buildUpon()
                     .appendPath(sortMode)
                     .appendQueryParameter(API_PARAM, API_KEY)
                     .build();

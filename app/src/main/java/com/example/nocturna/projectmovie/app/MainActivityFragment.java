@@ -75,6 +75,9 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         getLoaderManager().initLoader(MOVIE_LOADER, null, this);
+        if (savedInstanceState != null && savedInstanceState.containsKey(SELECTED_KEY)) {
+            mCursorPosition = savedInstanceState.getInt(SELECTED_KEY);
+        }
         super.onActivityCreated(savedInstanceState);
     }
 
@@ -85,6 +88,14 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
         inflater.inflate(R.menu.menu_main_fragment, menu);
         MenuItem item = menu.findItem(R.id.action_sort);
         item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        if (mCursorPosition != GridView.INVALID_POSITION) {
+            outState.putInt(SELECTED_KEY, mCursorPosition);
+        }
+        super.onSaveInstanceState(outState);
     }
 
     @Override
@@ -110,7 +121,6 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
             final RadioButton topRadio = (RadioButton) dialog.findViewById(R.id.radio_top);
             final Button sortButton = (Button) dialog.findViewById(R.id.sort_dialog_button);
 
-            Log.v(LOG_TAG, "Sort mode: " + sortMode);
             if (sortMode.equals(getString(R.string.pref_sort_popular)) || sortMode == null) {
                 sortRadioGroup.check(R.id.radio_popular);
             } else if (sortMode.equals(getString(R.string.pref_sort_top))) {
@@ -218,6 +228,11 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
         mGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                // Cancel background tasks
+                mMoviePosterAdapter.cancelTasks();
+
+                // Save the cursorPosition
+                mCursorPosition = position;
                 // Retrieve the movieId
                 Cursor cursor = (Cursor) mMoviePosterAdapter.getItem(position);
                 long movieId = cursor.getLong(COL_MOVIE_ID);
@@ -231,16 +246,12 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
                 startActivity(intent);
             }
         });
-
+        FetchMoviesTask fetchMoviesTask = new FetchMoviesTask(getActivity(), mMoviePosterAdapter);
+        fetchMoviesTask.execute();
 
 
         return rootView;
     }
-     private void runOnce() {
-         // Run the AsyncTask to download and parse the movie data from TheMovieDB.org
-         FetchMoviesTask fetchMoviesTask = new FetchMoviesTask(getActivity(), mMoviePosterAdapter);
-         fetchMoviesTask.execute();
-     }
 
     /**
      * Method called to create the CursorLoader that will cycle through the data being queried
@@ -292,11 +303,6 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
         if (mCursorPosition != GridView.INVALID_POSITION) {
             mGridView.smoothScrollToPosition(mCursorPosition);
         }
-
-//        if (runOnce) {
-//            runOnce();
-//            runOnce = false;
-//        }
     }
 
     /**

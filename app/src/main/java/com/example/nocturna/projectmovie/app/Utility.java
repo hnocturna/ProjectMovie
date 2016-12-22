@@ -72,11 +72,15 @@ public class Utility {
     }
 
     public static String longToDate(long dateInMillis) {
-        SimpleDateFormat sdf = new SimpleDateFormat("MMMM  dd, yyyy", Locale.getDefault());
+        SimpleDateFormat sdf = new SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault());
         Date date = new Date();
         date.setTime(dateInMillis);
         String dateStr = sdf.format(date);
 
         return dateStr;
+    }
+
+    public static String formatRating(double rating) {
+        return rating + "/10";
     }
 }

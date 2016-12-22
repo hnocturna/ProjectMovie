@@ -9,4 +9,7 @@
     <color name="black">#000000</color>
     <color name="offBlack">#111111</color>
     <color name="greyText">#B3B3B3</color>
+
+    <color name="grey">#BFBFBF</color>
+    <color name="yellow">#FFFF6F</color>
 </resources>

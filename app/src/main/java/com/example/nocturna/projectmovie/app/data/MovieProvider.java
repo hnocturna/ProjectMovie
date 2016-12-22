@@ -85,8 +85,8 @@ public class MovieProvider extends ContentProvider {
     }
 
     // Static constants for querying with selection
-    private static final String sMoviesOfGenreSelection = LinkEntry.TABLE_NAME + "." + GenreEntry.COLUMN_GENRE_ID + " = ?";
-    private static final String sGenresOfMovieSelection = LinkEntry.TABLE_NAME + "." + MovieEntry.COLUMN_MOVIE_ID + " = ?";
+    private static final String sMoviesOfGenreSelection = GenreEntry.TABLE_NAME + "." + GenreEntry.COLUMN_GENRE_ID + " = ?";
+    private static final String sGenresOfMovieSelection = MovieEntry.TABLE_NAME + "." + MovieEntry.COLUMN_MOVIE_ID + " = ?";
     private static final String sMovieSelection = MovieEntry.TABLE_NAME + "." + MovieEntry.COLUMN_MOVIE_ID + " = ?";
     private static final String sGenreSelection = GenreEntry.TABLE_NAME + "." + GenreEntry.COLUMN_GENRE_ID + " = ?";
 

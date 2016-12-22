@@ -12,7 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:numColumns="3"
-        android:title="@string/movie_grid"
+        android:stretchMode="columnWidth"
         android:id="@+id/movie_grid"
         />
 

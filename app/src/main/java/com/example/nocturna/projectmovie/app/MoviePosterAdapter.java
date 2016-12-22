@@ -1,15 +1,20 @@
 package com.example.nocturna.projectmovie.app;
 
+import android.app.Activity;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.support.v4.widget.CursorAdapter;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
+import android.widget.GridLayout;
+import android.widget.GridView;
 import android.widget.ImageView;
 
 import java.io.IOException;
@@ -17,7 +22,9 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -30,9 +37,16 @@ public class MoviePosterAdapter extends CursorAdapter {
     String LOG_TAG = MoviePosterAdapter.class.getSimpleName();
     // Member variables
     Map<Long, Bitmap> mMoviePosterMap;      // Used to hold the posters downloaded in memory so they do not need to be continually downloaded each time the view is loaded.
+    Map<Long, FetchPosterTask> mTasks;
+    int height;
+    int width;
 
     public MoviePosterAdapter(Context context, Cursor cursor, int flags) {
         super(context, cursor, flags);
+        DisplayMetrics displaymetrics = new DisplayMetrics();
+        ((Activity) context).getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
+        this.height = displaymetrics.heightPixels;
+        this.width = displaymetrics.widthPixels;
     }
 
     /**
@@ -52,11 +66,17 @@ public class MoviePosterAdapter extends CursorAdapter {
 
     @Override
     public Cursor swapCursor(Cursor newCursor) {
-        // Instantiate the Bitmap array with the number of rows returned by the cursor
+        // Instantiate the Map binding movieId to the correct poster Bitmap
         if (newCursor != null && mMoviePosterMap == null) {
             mMoviePosterMap = new HashMap<>();
         }
         return super.swapCursor(newCursor);
+    }
+
+    public void cancelTasks() {
+        for (long movieId : mTasks.keySet()) {
+            mTasks.get(movieId).cancel(true);
+        }
     }
 
     @Override
@@ -69,13 +89,22 @@ public class MoviePosterAdapter extends CursorAdapter {
         int cursorSize = cursor.getCount();
         String posterPath = cursor.getString(MainActivityFragment.COL_POSTER);
         long movieId = cursor.getLong(MainActivityFragment.COL_MOVIE_ID);
+
         ViewHolder viewHolder = (ViewHolder) view.getTag();
         ImageView imageView = viewHolder.posterView;
 
         if (mMoviePosterMap.get(movieId) == null) {
-            Object[] params = new Object[] {posterPath, movieId, cursorPosition, cursorSize, viewHolder};
             FetchPosterTask fetchPosterTask = new FetchPosterTask();
-            fetchPosterTask.execute(params);
+            Object[] params = new Object[] {posterPath, movieId, cursorPosition, cursorSize, viewHolder, fetchPosterTask};
+
+            if (mTasks == null) {
+                mTasks = new HashMap<>();
+            }
+
+            if (!mTasks.keySet().contains(movieId)) {
+                mTasks.put(movieId, fetchPosterTask);
+                fetchPosterTask.execute(params);
+            }
         } else {
             imageView.setImageBitmap(mMoviePosterMap.get(movieId));
         }
@@ -99,22 +128,22 @@ public class MoviePosterAdapter extends CursorAdapter {
      * AsyncTask for downloading poster images in background and loading them into the ImageView
      * being inflated into the GridView
      */
-    private class FetchPosterTask extends AsyncTask<Object, Void, Bitmap> {
+    private class FetchPosterTask extends AsyncTask<Object, Void, Void> {
         ViewHolder viewHolder;
         int position;
         int size;
         long movieId;
+        FetchPosterTask fetchPosterTask;
 
         @Override
-        protected Bitmap doInBackground(Object... params) {
-            long startTime = System.currentTimeMillis();
-
+        protected Void doInBackground(Object... params) {
             // Retrieve the variables passed
             String posterPath = (String) params[0];         // Path of the poster
-            this.movieId = (Long) params[1];
+            this.movieId = (Long) params[1];                // movieId
             this.position = (Integer) params[2];            // The position of the cursor
             this.size = (Integer) params[3];                // Number of rows returned by the cursor
-            this.viewHolder = (ViewHolder) params[4];      // ImageView requiring poster
+            this.viewHolder = (ViewHolder) params[4];       // ImageView requiring poster
+            this.fetchPosterTask = (FetchPosterTask) params[5];
 
             // Poster is defined outside of the try block so that it can be passed to the onPostExecute
             Bitmap poster = null;
@@ -132,6 +161,10 @@ public class MoviePosterAdapter extends CursorAdapter {
                 posterConnection = (HttpURLConnection) posterUrl.openConnection();
                 posterConnection.setDoInput(true);
                 posterConnection.connect();
+
+                if (isCancelled()) {
+                    return null;
+                }
 
                 // Convert to an input stream and utilize BitmapFactory to output a bitmap
                 InputStream bitmapStream = posterConnection.getInputStream();
@@ -151,22 +184,16 @@ public class MoviePosterAdapter extends CursorAdapter {
                     posterConnection.disconnect();
                 }
             }
-            long endTime = System.currentTimeMillis();
-            long timeElapsed = endTime - startTime;
-            Log.v(LOG_TAG, "Time elapsed for thread " + position + ": " + timeElapsed + "ms");
-            return poster;
+            return null;
         }
 
         @Override
-        protected void onPostExecute(Bitmap bitmap) {
-            // Load the bitmap into the ImageView
-            if (position == viewHolder.position) {
-                viewHolder.posterView.setImageBitmap(bitmap);
-            }
-            if (position == size - 1) {
-                notifyDataSetChanged();
-            }
+        protected void onPostExecute(Void param) {
+            // NotifyDataSetChanged when finished loading last poster image
+            notifyDataSetChanged();
 
+            // Remove the task from mTasks so that other tasks can be loaded
+            mTasks.remove(movieId);
         }
     }
 }

@@ -24,7 +24,7 @@
 
             <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="203dp">
 
                 <ImageView
                     android:id="@+id/detail_backdrop_image"
@@ -33,12 +33,21 @@
                     android:scaleType="fitXY"
                     />
 
+                <ImageView
+                    android:id="@+id/detail_favorite_button"
+                    android:layout_alignParentRight="true"
+                    android:layout_marginTop="@dimen/layout_margin"
+                    android:layout_marginRight="10dp"
+                    android:padding="@dimen/button_padding"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp" />
+
                 <TextView
                     android:id="@+id/detail_title_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginLeft="@dimen/layout_margin"
-                    android:layout_marginBottom="@dimen/layout_margin"
+                    android:layout_marginBottom="@dimen/separation_margin"
                     android:layout_alignParentBottom="true"
                     style="@style/detail_title_text"
                     />
@@ -52,31 +61,69 @@
                 android:paddingLeft="@dimen/layout_margin"
                 android:paddingRight="@dimen/layout_margin"
                 android:paddingTop="@dimen/separation_margin"
-                android:paddingBottom="@dimen/separation_margin"
                 android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/detail_release_text"
+                <RelativeLayout
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    style="@style/detail_general_text"/>
+                    android:layout_height="wrap_content">
+
+                    <TextView
+                        android:id="@+id/detail_release_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        style="@style/detail_general_text"/>
+
+                    <TextView
+                        android:id="@+id/detail_rating_text"
+                        android:layout_alignParentRight="true"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        style="@style/detail_general_text"/>
+
+                </RelativeLayout>
 
                 <TextView
-                    android:id="@+id/detail_rating_text"
-                    android:layout_width="wrap_content"
+                    android:id="@+id/detail_genre_text"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    style="@style/detail_general_text"/>
+                    style="@style/detail_genre_text"/>
 
             </LinearLayout>
-
-
 
             <TextView
                 android:id="@+id/detail_overview_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_margin="@dimen/layout_margin"
+                android:layout_marginLeft="@dimen/layout_margin"
+                android:layout_marginRight="@dimen/layout_margin"
+                android:layout_marginBottom="@dimen/layout_margin"
+                android:layout_marginTop="@dimen/layout_margin"
                 style="@style/detail_overview_text"/>
+
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/detail_overview_text"
+                android:paddingRight="@dimen/layout_margin"
+                android:paddingLeft="@dimen/layout_margin"
+                android:paddingTop="@dimen/separation_margin"
+                android:paddingBottom="@dimen/separation_margin">
+
+                <ImageView
+                    android:id="@+id/detail_trailer_thumbnail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+                <TextView
+                    android:id="@+id/detail_trailer_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="@dimen/layout_margin"
+                    android:layout_gravity="center_vertical"
+                    style="@style/detail_general_text"/>
+
+            </LinearLayout>
 
         </LinearLayout>
 

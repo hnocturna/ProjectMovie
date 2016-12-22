@@ -46,6 +46,7 @@ public class MovieContract {
         public static final String COLUMN_BACKDROP = "backdrop";
         public static final String COLUMN_POSTER = "poster";
         public static final String COLUMN_TRAILER = "trailer";
+        public static final String COLUMN_FAVORITE = "favorite";
 
         /**
          * Builds URI pointing to the database row given the row id

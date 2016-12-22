@@ -31,6 +31,12 @@
         <item name="android:textColor">@color/offWhiteText</item>
     </style>
 
+    <style name="detail_genre_text">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/offWhiteText</item>
+        <item name="android:fontFamily">sans-serif-light</item>
+    </style>
+
     <style name="detail_overview_text">
         <item name="android:textSize">14sp</item>
         <item name="android:textColor">@color/greyText</item>
