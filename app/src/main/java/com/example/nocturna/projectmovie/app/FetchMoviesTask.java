@@ -293,7 +293,6 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
     @Override
     protected Movie[] doInBackground(Void... params) {
         long startTime = System.currentTimeMillis();
-        Log.v(LOG_TAG, "In doInBackground");
         if (params == null) {
             return null;
         }
@@ -313,7 +312,6 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
                             mContext.getString(R.string.pref_sort_popular)
                     );
 
-            Log.v(LOG_TAG, "Downloading movies. Sorting by: " + sortMode);
 
             // Build the URL using a base Uri and appending on additional parameters
             Uri builtUri = Uri.parse(BASE_URI).buildUpon()
@@ -355,29 +353,17 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
             movieJsonStr = buffer.toString();
 
             long time = (System.currentTimeMillis() - startTime);
-            Log.v(LOG_TAG, "doInBackground: Movie JSON Objects downloaded. Time elapsed: " + time + "ms");
 
             // Store the retrieved movies as an array. Images will be downloaded in the CursorAdapter
             // on-the-fly. Hopefully only once as to prevent the constant loading of images as the
             // screen is scrolled.
             Movie[] movieArrayFromJson = getMovieDataFromString(movieJsonStr);
 
-            time = (System.currentTimeMillis() - startTime);
-            Log.v(LOG_TAG, "JSON String converted to Movie objects. Time elapsed: " + time + "ms");
-
             // Add data to the Link Table
             int rows = addMoviesAndGenres(movieArrayFromJson);
-            Log.v(LOG_TAG, rows + " rows added to Link Table");
-
-            time = (System.currentTimeMillis() - startTime);
-            Log.v(LOG_TAG, "Movies added to Link Table. Time elapsed: " + time + "ms");
 
             // Add trailer paths to each movie object and then insert the data
             rows = addMovies(movieArrayFromJson);
-            Log.v(LOG_TAG, rows + " rows added to Movies Table");
-
-            time = (System.currentTimeMillis() - startTime);
-            Log.v(LOG_TAG, "Movies added to Movie Table. Time elapsed: " + time + "ms");
 
             // Get genre data and insert the data if it hasn't been added before
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
@@ -385,34 +371,12 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
 
             if (getGenre) {
                 rows = getGenreData();
-                Log.v(LOG_TAG, rows + " rows added Genre Table");
                 if (rows > 0) {
                     SharedPreferences.Editor editor = prefs.edit();
                     editor.putBoolean(mContext.getString(R.string.genres_retrieved), true);
                     editor.commit();
                 }
             }
-
-            time = (System.currentTimeMillis() - startTime);
-            Log.v(LOG_TAG, "Genres added to Genre Table. Time elapsed: " + time + "ms");
-
-//                try {
-//                    // Open a connection to the poster image.
-//                    URL posterUrl = new URL(movie.getPosterPath());
-//                    posterConnection = (HttpURLConnection) posterUrl.openConnection();
-//                    posterConnection.setDoInput(true);
-//                    posterConnection.connect();
-//
-//                    // Convert to an input stream and utilize BitmapFactor to output a bitmap
-//                    InputStream bitmapStream = posterConnection.getInputStream();
-//                    Bitmap poster = BitmapFactory.decodeStream(bitmapStream);
-//
-//                    movie.addPoster(poster);
-//                } finally {
-//                    if (posterConnection != null) {
-//                        posterConnection.disconnect();
-//                    }
-//                }
 
             return movieArrayFromJson;
 

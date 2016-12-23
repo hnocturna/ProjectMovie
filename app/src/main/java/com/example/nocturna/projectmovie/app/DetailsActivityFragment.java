@@ -16,12 +16,14 @@ import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.util.Log;
 import android.util.TimeFormatException;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -38,6 +40,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.List;
 
 /**
  * A placeholder fragment containing a simple view.
@@ -50,8 +53,10 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
 
     // Constants
     String LOG_TAG = DetailsActivityFragment.class.getSimpleName();
+    final String API_KEY = BuildConfig.API_KEY;
+    final String API_PARAM = "api_key";
+    final String BASE_URI = "http://api.themoviedb.org/3/movie";
     private static final int DETAILS_LOADER = 1;
-    private static final String MOVIE_KEY = "mMovieUri";
 
     // Column Projection
     private static final String[] DETAILS_COLUMNS = new String[] {
@@ -95,6 +100,8 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
 
     LinearLayout backgroundLayout;
 
+    ListView reviewListView;
+
     public DetailsActivityFragment() {
     }
 
@@ -108,7 +115,6 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
         // Initialize member variables
         mMovieUri = intent.getData();
         mMovieId = MovieContract.MovieEntry.getMovieIdFromUri(mMovieUri);
-        Log.v(LOG_TAG, "MovieID: " + mMovieId);
         mContext = getActivity();
 
         // Initialize views
@@ -119,7 +125,6 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
         genreText = (TextView) rootView.findViewById(R.id.detail_genre_text);
         trailerText = (TextView) rootView.findViewById(R.id.detail_trailer_text);
 
-        posterImage = (ImageView) rootView.findViewById(R.id.detail_poster_image);
         backdropImage = (ImageView) rootView.findViewById(R.id.detail_backdrop_image);
         trailerImage = (ImageView) rootView.findViewById(R.id.detail_trailer_thumbnail);
 
@@ -171,21 +176,23 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
         });
 
         backgroundLayout = (LinearLayout) rootView.findViewById(R.id.detail_subtitle_background);
+        float pixels = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1, getResources().getDisplayMetrics());
+
+        overviewText.setMinHeight(Math.round(148 * pixels));
+
+        reviewListView = (ListView) rootView.findViewById(R.id.detail_review_list);
 
         return rootView;
     }
 
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        Log.v(LOG_TAG, "onCreateLoader called");
         if (mMovieUri == null) {
             return null;
         }
 
         mMovieId = MovieContract.MovieEntry.getMovieIdFromUri(mMovieUri);
         Uri movieUri = MovieContract.LinkEntry.buildGenresUriFromMovieId(mMovieId);
-
-        Log.v(LOG_TAG, movieUri.toString());
 
         return new CursorLoader(
                 getActivity(),
@@ -207,7 +214,7 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
         if (!cursor.moveToFirst()) {
-            Log.v(LOG_TAG, "Cursor returned no rows!");
+            Log.d(LOG_TAG, "Cursor returned no rows!");
             return;
         }
 
@@ -358,9 +365,9 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
 
     private class FetchTrailerTask extends AsyncTask<Long, Void, String> {
         // Constants
-        final String API_KEY = BuildConfig.API_KEY;
-        final String API_PARAM = "api_key";
-        final String BASE_URI = "http://api.themoviedb.org/3/movie";
+//        final String API_KEY = BuildConfig.API_KEY;
+//        final String API_PARAM = "api_key";
+//        final String BASE_URI = "http://api.themoviedb.org/3/movie";
 
         @Override
         protected String doInBackground(Long... params) {
@@ -557,6 +564,16 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
                     }
                 });
             }
+        }
+    }
+
+    private class FetchReviewTask extends AsyncTask<Long, Void, Void> {
+        @Override
+        protected Void doInBackground(Long... params) {
+            // Constants
+            long movieId = params[0];
+
+            return null;
         }
     }
 }
