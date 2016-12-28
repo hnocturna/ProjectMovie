@@ -595,7 +595,7 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
             JSONObject jsonReview = new JSONObject(jsonReviewString);
             JSONArray jsonReviewArray = jsonReview.getJSONArray(TMD_RESULTS);
 
-            for (int i = 0; i < jsonReviewArray.length(); i++ ) {
+            for (int i = 0; i < jsonReviewArray.length(); i++) {
                 // Retrieve the author and content of the review
                 String author = jsonReviewArray.getJSONObject(i).getString(TMD_AUTHOR);
                 String content = jsonReviewArray.getJSONObject(i).getString(TMD_CONTENT);
