@@ -38,15 +38,15 @@ public class MoviePosterAdapter extends CursorAdapter {
     // Member variables
     Map<Long, Bitmap> mMoviePosterMap;      // Used to hold the posters downloaded in memory so they do not need to be continually downloaded each time the view is loaded.
     Map<Long, FetchPosterTask> mTasks;
-    int height;
-    int width;
 
+    /**
+     * Default constructor provided by Android
+     * @param context interface for global context
+     * @param cursor cursor containing all rows to be cycled
+     * @param flags flags
+     */
     public MoviePosterAdapter(Context context, Cursor cursor, int flags) {
         super(context, cursor, flags);
-        DisplayMetrics displaymetrics = new DisplayMetrics();
-        ((Activity) context).getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
-        this.height = displaymetrics.heightPixels;
-        this.width = displaymetrics.widthPixels;
     }
 
     /**
@@ -73,6 +73,7 @@ public class MoviePosterAdapter extends CursorAdapter {
         return super.swapCursor(newCursor);
     }
 
+    // Pre-maturely any tasks that are in working the the background to allow for smooth UI
     public void cancelTasks() {
         for (long movieId : mTasks.keySet()) {
             mTasks.get(movieId).cancel(true);
@@ -94,18 +95,23 @@ public class MoviePosterAdapter extends CursorAdapter {
         ImageView imageView = viewHolder.posterView;
 
         if (mMoviePosterMap.get(movieId) == null) {
+            // Download the poster if it does not exist in the map
             FetchPosterTask fetchPosterTask = new FetchPosterTask();
             Object[] params = new Object[] {posterPath, movieId, cursorPosition, cursorSize, viewHolder, fetchPosterTask};
 
             if (mTasks == null) {
+                // Create a new HashMap to hold all tasks that are running
                 mTasks = new HashMap<>();
             }
 
             if (!mTasks.keySet().contains(movieId)) {
+                // Only allow the AsyncTask to run if the same task isn't already running to prevent
+                // duplicate threads
                 mTasks.put(movieId, fetchPosterTask);
                 fetchPosterTask.execute(params);
             }
         } else {
+            // If image already exists in HashMap, then set image
             imageView.setImageBitmap(mMoviePosterMap.get(movieId));
         }
     }
@@ -189,7 +195,7 @@ public class MoviePosterAdapter extends CursorAdapter {
 
         @Override
         protected void onPostExecute(Void param) {
-            // NotifyDataSetChanged when finished loading last poster image
+            // NotifyDataSetChanged when finished loading poster image
             notifyDataSetChanged();
 
             // Remove the task from mTasks so that other tasks can be loaded

@@ -15,6 +15,8 @@
         android:id="@+id/list_review_author"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="right"
+        android:layout_marginTop="@dimen/separation_margin"
         style="@style/list_item_review_author_text"/>
 
 </LinearLayout>

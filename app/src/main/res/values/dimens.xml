@@ -6,5 +6,5 @@
 
     <dimen name="layout_margin">16dp</dimen>
     <dimen name="separation_margin">8dp</dimen>
-    <dimen name="button_padding">6dp</dimen>
+    <dimen name="favorite_button_padding">10dp</dimen>
 </resources>

@@ -6,25 +6,23 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.util.Log;
-import android.util.TimeFormatException;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
+import android.widget.AdapterView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.example.nocturna.projectmovie.app.data.MovieContract;
@@ -40,7 +38,8 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * A placeholder fragment containing a simple view.
@@ -50,6 +49,10 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
     Uri mMovieUri;
     Context mContext;
     long mMovieId;
+    ReviewAdapter mReviewAdapter;
+    float mPixels;
+    float LAYOUT_MARGIN;
+    float SEPARATION_MARGIN;
 
     // Constants
     String LOG_TAG = DetailsActivityFragment.class.getSimpleName();
@@ -57,6 +60,7 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
     final String API_PARAM = "api_key";
     final String BASE_URI = "http://api.themoviedb.org/3/movie";
     private static final int DETAILS_LOADER = 1;
+
 
     // Column Projection
     private static final String[] DETAILS_COLUMNS = new String[] {
@@ -86,19 +90,22 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
     private static final int COL_TRAILER = 9;
     private static final int COL_FAVORITE = 10;
 
+
+    // Views and Layouts to be populated
     TextView titleText;
     TextView overviewText;
     TextView ratingText;
     TextView releaseText;
     TextView genreText;
     TextView trailerText;
+    TextView reviewTitleText;
 
-    ImageView posterImage;
     ImageView backdropImage;
     ImageView trailerImage;
     ImageView favoriteIcon;
 
     LinearLayout backgroundLayout;
+    LinearLayout trailerLayout;
 
     ListView reviewListView;
 
@@ -124,6 +131,7 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
         releaseText = (TextView) rootView.findViewById(R.id.detail_release_text);
         genreText = (TextView) rootView.findViewById(R.id.detail_genre_text);
         trailerText = (TextView) rootView.findViewById(R.id.detail_trailer_text);
+        reviewTitleText = (TextView) rootView.findViewById(R.id.detail_review_title);
 
         backdropImage = (ImageView) rootView.findViewById(R.id.detail_backdrop_image);
         trailerImage = (ImageView) rootView.findViewById(R.id.detail_trailer_thumbnail);
@@ -158,7 +166,7 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
                             new String[]{Long.toString(mMovieId)}
                     );
 
-                    favoriteIcon.setImageDrawable(mContext.getDrawable(R.drawable.star_on));
+                    favoriteIcon.setImageDrawable(ContextCompat.getDrawable(mContext, R.drawable.star_on));
                 } else {
                     ContentValues values = new ContentValues();
                     values.put(MovieContract.MovieEntry.COLUMN_FAVORITE, 0);
@@ -170,17 +178,36 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
                             new String[] {Long.toString(mMovieId)}
                     );
 
-                    favoriteIcon.setImageDrawable(mContext.getDrawable(R.drawable.star_off));
+                    favoriteIcon.setImageDrawable(ContextCompat.getDrawable(mContext, R.drawable.star_off));
                 }
             }
         });
 
         backgroundLayout = (LinearLayout) rootView.findViewById(R.id.detail_subtitle_background);
-        float pixels = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1, getResources().getDisplayMetrics());
+        trailerLayout = (LinearLayout) rootView.findViewById(R.id.detail_trailer_layout);
 
-        overviewText.setMinHeight(Math.round(148 * pixels));
+        // Create pixel variable to work in dips
+        mPixels = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1, getResources().getDisplayMetrics());
+
+        // Set so that trailers appear at the bottom of the page, allowing just enough room for the
+        // "Reviews" TextView to show if there are reviews
+        overviewText.setMinHeight(Math.round(148 * mPixels));
 
         reviewListView = (ListView) rootView.findViewById(R.id.detail_review_list);
+        reviewListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                if (mReviewAdapter.isExpanded(position)) {
+                    mReviewAdapter.contractContent(position);
+                } else {
+                    mReviewAdapter.expandContent(position);
+                }
+            }
+        });
+
+        // Initialize margin variables
+        LAYOUT_MARGIN = getResources().getDimension(R.dimen.layout_margin);
+        SEPARATION_MARGIN = getResources().getDimension(R.dimen.separation_margin);
 
         return rootView;
     }
@@ -229,6 +256,7 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
         String genres = cursor.getString(COL_GENRE);
         boolean favorite;
 
+        // Download trailer data if it doesn't not exist in database
         if (cursor.getString(COL_TRAILER) != null) {
             String trailerPath = cursor.getString(COL_TRAILER);
             FetchTrailerThumbnailTask fetchTrailerThumbnailTask = new FetchTrailerThumbnailTask();
@@ -238,12 +266,14 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
             fetchTrailerTask.execute(movieId);
         }
 
+        // Set the favorite icon to correct tint if favorited in database
         if (cursor.getInt(COL_FAVORITE) == 0) {
-            favoriteIcon.setImageDrawable(mContext.getDrawable(R.drawable.star_off));
+            favoriteIcon.setImageDrawable(ContextCompat.getDrawable(mContext, R.drawable.star_off));
         } else {
-            favoriteIcon.setImageDrawable(mContext.getDrawable(R.drawable.star_on));
+            favoriteIcon.setImageDrawable(ContextCompat.getDrawable(mContext, R.drawable.star_on));
         }
 
+        // Get all genres of the movie
         while (cursor.moveToNext()) {
             genres += ", " + cursor.getString(COL_GENRE);
         }
@@ -252,11 +282,15 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
         // Convert release date into String format
         String releaseDateStr = Utility.longToDate(releaseDate);
 
+        // Download movie backdrop
         String[] params = new String[] {posterPath, backdropPath, title, overview, rating, releaseDateStr, genres};
         FetchImageTask fetchImageTask = new FetchImageTask();
         fetchImageTask.execute(params);
 
-
+        // Download movie reviews
+        Long[] params2 = new Long[] {movieId};
+        FetchReviewTask fetchReviewTask = new FetchReviewTask();
+        fetchReviewTask.execute(params2);
     }
 
     @Override
@@ -293,28 +327,6 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
 
             // Initialize the connection that will need to be closed in the finally block
             HttpURLConnection urlConnection = null;
-
-//            try {
-//                // Download the poster as a bitmap and add it to the Movie object passed to the task
-//                URL posterUrl = new URL(posterStr);
-//                urlConnection = (HttpURLConnection) posterUrl.openConnection();
-//                // urlConnection.setRequestMethod("GET");
-//                urlConnection.setDoInput(true);
-//                urlConnection.connect();
-//
-//                InputStream bitmapStream = urlConnection.getInputStream();
-//                Bitmap poster = BitmapFactory.decodeStream(bitmapStream);
-//                images[0] = poster;
-//
-//            } catch (MalformedURLException e) {
-//                Log.d(LOG_TAG, "Incorrect poster URL formatting", e);
-//            } catch (IOException e) {
-//                Log.d(LOG_TAG, "Error downloading poster", e);
-//            } finally {
-//                if (urlConnection != null) {
-//                    urlConnection.disconnect();
-//                }
-//            }
 
             try {
                 // Download the backdrop as above
@@ -357,18 +369,11 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
                 ratingText.setText(rating);
                 releaseText.setText(releaseDate);
                 genreText.setText(genres);
-                trailerText.setText("Trailer");
-                // ScrollView scrollView = (ScrollView) get
             }
         }
     }
 
     private class FetchTrailerTask extends AsyncTask<Long, Void, String> {
-        // Constants
-//        final String API_KEY = BuildConfig.API_KEY;
-//        final String API_PARAM = "api_key";
-//        final String BASE_URI = "http://api.themoviedb.org/3/movie";
-
         @Override
         protected String doInBackground(Long... params) {
             // Constants
@@ -552,6 +557,14 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
         protected void onPostExecute(Bitmap bitmap) {
             // Set the thumbnail for the trailer
             if (bitmap != null) {
+                // Padding is set dynamically so that it doesn't create empty space at the bottom of
+                // the page if there is nothing to scroll to
+                trailerLayout.setPadding(
+                        Math.round(LAYOUT_MARGIN),
+                        Math.round(SEPARATION_MARGIN),
+                        Math.round(LAYOUT_MARGIN),
+                        Math.round(SEPARATION_MARGIN)
+                );
                 trailerImage.setImageBitmap(bitmap);
                 // Set an Intent to fire a weblink to the YouTube trailer on click
                 trailerImage.setOnClickListener(new View.OnClickListener() {
@@ -563,17 +576,137 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
                         startActivity(intent);
                     }
                 });
+                trailerText.setText(mContext.getString(R.string.trailers));
             }
         }
     }
 
-    private class FetchReviewTask extends AsyncTask<Long, Void, Void> {
+    private class FetchReviewTask extends AsyncTask<Long, Void, Map<String, String>> {
+
+        private Map<String, String> parseReviews(String jsonReviewString) throws JSONException {
+            // Constants
+            final String TMD_RESULTS = "results";
+            final String TMD_AUTHOR = "author";
+            final String TMD_CONTENT = "content";
+
+            // Initialize LinkedHashMap to store reviews
+            Map<String, String> reviewMap = new LinkedHashMap<>();
+
+            JSONObject jsonReview = new JSONObject(jsonReviewString);
+            JSONArray jsonReviewArray = jsonReview.getJSONArray(TMD_RESULTS);
+
+            for (int i = 0; i < jsonReviewArray.length(); i++ ) {
+                // Retrieve the author and content of the review
+                String author = jsonReviewArray.getJSONObject(i).getString(TMD_AUTHOR);
+                String content = jsonReviewArray.getJSONObject(i).getString(TMD_CONTENT);
+
+                // Add author-content key-value pair to the review map to populate the ListView
+                reviewMap.put(author, content);
+            }
+
+            return reviewMap;
+        }
+
         @Override
-        protected Void doInBackground(Long... params) {
+        protected Map<String, String> doInBackground(Long... params) {
             // Constants
             long movieId = params[0];
+            final String REVIEW_PATH = "reviews";
+            final String LANGUAGE_PARAM = "language";
+            final String LANGUAGE = "en-US";
 
-            return null;
+            // Defined outside of try-block to be closed in finally-block
+            HttpURLConnection urlConnection = null;
+            BufferedReader reader = null;
+
+            // Review Map to be passed to the onPostExecute
+            Map<String, String> reviewMap = null;
+
+            try {
+                // Parse the URI and open a connection and download the JSON data
+                Uri reviewUri = Uri.parse(BASE_URI).buildUpon()
+                        .appendPath(Long.toString(movieId))
+                        .appendPath(REVIEW_PATH)
+                        .appendQueryParameter(API_PARAM, API_KEY)
+                        .appendQueryParameter(LANGUAGE_PARAM, LANGUAGE)
+                        .build();
+
+                URL reviewUrl = new URL(reviewUri.toString());
+                urlConnection = (HttpURLConnection) reviewUrl.openConnection();
+                urlConnection.setRequestMethod("GET");
+
+                InputStream inputStream = urlConnection.getInputStream();
+                StringBuffer buffer = new StringBuffer();
+
+                if (inputStream == null) {
+                    // Nothing being transferred, nothing to do.
+                    return null;
+                }
+
+                reader = new BufferedReader(new InputStreamReader(inputStream));
+                String line;
+
+                while ((line = reader.readLine()) != null) {
+                    // Append new line between each line for easier reading
+                    buffer.append(line + "\n");
+                }
+
+                if (buffer.length() == 0) {
+                    // Empty stream
+                    return null;
+                }
+
+                String reviewJson = buffer.toString();
+                reviewMap = parseReviews(reviewJson);
+
+            } catch (MalformedURLException e) {
+                Log.d(LOG_TAG, "Malformed exception trying to download reviews", e);
+                e.printStackTrace();
+            } catch (IOException e) {
+                Log.d(LOG_TAG, "IO Exception trying to download reviews", e);
+                e.printStackTrace();
+            } catch (JSONException e) {
+                Log.d(LOG_TAG, "JSON Exception trying to download reviews", e);
+                e.printStackTrace();
+            } finally {
+                // Close opened resources
+                if (urlConnection != null) {
+                    urlConnection.disconnect();
+                }
+                if (reader != null) {
+                    try {
+                        reader.close();
+                    } catch (IOException e) {
+                        Log.d(LOG_TAG, "Error closing stream", e);
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+            return reviewMap;
+        }
+
+        @Override
+        protected void onPostExecute(Map<String, String> reviewMap) {
+            if (!reviewMap.keySet().isEmpty()) {
+                // If there are reviews, set the adapter. The layout margins are set programmatically
+                // because if there are no reviews, the layout will not contain margins that allow
+                // the ScrollView to scroll
+                mReviewAdapter = new ReviewAdapter(new LinkedHashMap<>(reviewMap), mContext);
+                reviewListView.setAdapter(mReviewAdapter);
+                reviewListView.setPadding(
+                        Math.round(LAYOUT_MARGIN),
+                        Math.round(LAYOUT_MARGIN),
+                        Math.round(LAYOUT_MARGIN),
+                        Math.round(LAYOUT_MARGIN)
+                );
+                mReviewAdapter.notifyDataSetChanged();
+                reviewTitleText.setText(mContext.getString(R.string.reviews));
+
+                // Move up the trailer so that the Review title text can show to indicate that there
+                // are reviews to the user
+                overviewText.setMinHeight(Math.round(120 * mPixels));
+            }
         }
     }
 }

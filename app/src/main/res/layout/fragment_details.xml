@@ -20,16 +20,18 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:descendantFocusability="blocksDescendants">
 
             <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="203dp">
+                android:layout_height="wrap_content">
 
                 <ImageView
+                    android:adjustViewBounds="true"
                     android:id="@+id/detail_backdrop_image"
                     android:layout_width="match_parent"
-                    android:layout_height="203dp"
+                    android:layout_height="wrap_content"
                     android:scaleType="fitXY"
                     />
 
@@ -38,7 +40,7 @@
                     android:layout_alignParentRight="true"
                     android:layout_marginTop="@dimen/layout_margin"
                     android:layout_marginRight="10dp"
-                    android:padding="@dimen/button_padding"
+                    android:padding="@dimen/favorite_button_padding"
                     android:layout_width="48dp"
                     android:layout_height="48dp" />
 
@@ -102,13 +104,10 @@
 
 
             <LinearLayout
+                android:id="@+id/detail_trailer_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/detail_overview_text"
-                android:paddingRight="@dimen/layout_margin"
-                android:paddingLeft="@dimen/layout_margin"
-                android:paddingTop="@dimen/separation_margin"
-                android:paddingBottom="@dimen/separation_margin">
+                >
 
                 <ImageView
                     android:id="@+id/detail_trailer_thumbnail"
@@ -125,11 +124,19 @@
 
             </LinearLayout>
 
+            <TextView
+                android:id="@+id/detail_review_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:layout_marginTop="@dimen/separation_margin"
+                android:layout_marginBottom="@dimen/separation_margin"
+                style="@style/detail_general_text"/>
+
             <ListView
                 android:id="@+id/detail_review_list"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
-
             </ListView>
 
         </LinearLayout>

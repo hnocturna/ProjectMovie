@@ -77,6 +77,7 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
         JSONObject movieJson = new JSONObject(jsonString);
         JSONArray movieJsonArray = movieJson.getJSONArray(TMD_MOVIE_RESULTS);
 
+        // To hold all movie objects that will need to be added to database
         Movie[] movieArray = new Movie[movieJsonArray.length()];
 
         // Create a new Movie object and populate it with details from the JSON string
@@ -103,7 +104,27 @@ class FetchMoviesTask extends AsyncTask<Void, Void, Movie[]> {
             );
 
             if (cursor.moveToFirst()) {
-                // If cursor returns a row, then movie already exists in database and it can be skipped
+                // If cursor returns a row, then movie already exists in database and only the
+                // rating and popularity need to be updated in the database
+                double dbPopularity = cursor.getDouble(cursor.getColumnIndex(MovieEntry.COLUMN_POPULARITY));
+                double dbRating = cursor.getDouble(cursor.getColumnIndex(MovieEntry.COLUMN_RATING));
+
+                if (dbPopularity != popularity || dbRating != rating) {
+                    // If either value does not match the value in the database, then the database
+                    // needs to be updated. The cost of writing two values is practically the same
+                    // as writing one value, so there is only one check.
+                    ContentValues values = new ContentValues();
+                    values.put(MovieEntry.COLUMN_POPULARITY, popularity);
+                    values.put(MovieEntry.COLUMN_RATING, rating);
+
+                    mContext.getContentResolver().update(
+                            MovieEntry.CONTENT_URI,
+                            values,
+                            MovieEntry.COLUMN_MOVIE_ID + " = ?",
+                            new String[] {Long.toString(movieId)}
+                    );
+                }
+
                 cursor.close();
                 continue;
             }

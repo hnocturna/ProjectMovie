@@ -26,4 +26,8 @@
 
     <!-- Labels for genre -->
     <string name="genres_retrieved">genres_exist</string>
+
+    <!-- Labels for DetailActivity -->
+    <string name="reviews">Reviews</string>
+    <string name="trailers">Trailer</string>
 </resources>

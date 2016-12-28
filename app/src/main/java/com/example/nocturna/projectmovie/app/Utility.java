@@ -19,6 +19,12 @@ import java.util.Locale;
  */
 
 public class Utility {
+    /**
+     * Removes all null values from the array
+     * @param movieArray array of movies that may contain null values where the movie already exists
+     *                   in the database
+     * @return resized movieArray without null values
+     */
     public static Movie[] cleanMovieArray(Movie[] movieArray) {
         List<Movie> list = new ArrayList<Movie>(Arrays.asList(movieArray));
         list.removeAll(Collections.singleton(null));
@@ -62,7 +68,6 @@ public class Utility {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         try {
             date = sdf.parse(dateString);
-            Log.v("TEST", date.toString());
         } catch (ParseException e) {
             e.printStackTrace();
         }
