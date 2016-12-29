@@ -1,7 +1,9 @@
 package com.example.nocturna.projectmovie.app;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.os.AsyncTask;
 import android.util.Log;
 
 import java.text.ParseException;
@@ -31,6 +33,11 @@ public class Utility {
         return list.toArray(new Movie[list.size()]);
     }
 
+    /**
+     * Calculates the average pixel color of an image to use as the divider in the DetailsFragment
+     * @param bitmap Image to calculate the average pixel color of
+     * @return Color as an int
+     */
     public static int getDominantColor(Bitmap bitmap) {
         if (null == bitmap) return Color.TRANSPARENT;
 
@@ -63,6 +70,11 @@ public class Utility {
                 blueBucket / pixelCount);
     }
 
+    /**
+     * Converts a date String to a long in milliseconds to store in the database
+     * @param dateString Date in String form from TheMovieDb API
+     * @return date in milliseconds
+     */
     public static long dateToLong(String dateString) {
         Date date = new Date();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
@@ -76,6 +88,11 @@ public class Utility {
         return dateInMillis;
     }
 
+    /**
+     * Converts the date to user-readable String
+     * @param dateInMillis date in milliseconds from the database
+     * @return Date formatted in String to populate TextViews
+     */
     public static String longToDate(long dateInMillis) {
         SimpleDateFormat sdf = new SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault());
         Date date = new Date();
@@ -85,7 +102,14 @@ public class Utility {
         return dateStr;
     }
 
+    /**
+     * Appends "/10" to the rating to make the rating more obvious
+     * @param rating rating as a decimal from TheMovieDB API
+     * @return Rating in String format "X/10"
+     */
     public static String formatRating(double rating) {
         return rating + "/10";
     }
+
+
 }

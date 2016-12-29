@@ -1,35 +1,28 @@
 package com.example.nocturna.projectmovie.app;
 
-import android.app.Activity;
 import android.content.Context;
-import android.content.ContextWrapper;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.support.v4.widget.CursorAdapter;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AbsListView;
-import android.widget.GridLayout;
-import android.widget.GridView;
 import android.widget.ImageView;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import com.example.nocturna.projectmovie.app.disk.ImageContract;
+import com.example.nocturna.projectmovie.app.disk.LoadImageResponse;
+import com.example.nocturna.projectmovie.app.disk.LoadImageTask;
+import com.example.nocturna.projectmovie.app.disk.SaveImageTask;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -41,13 +34,11 @@ import java.util.Map;
 public class MoviePosterAdapter extends CursorAdapter {
     // Constants
     private final String LOG_TAG = MoviePosterAdapter.class.getSimpleName();
-    private final String POSTER_DIRECTORY = "poster_thumb";
-    private final String PNG_FILE_TYPE = ".png";
-
 
     // Member variables
-    Map<Long, Bitmap> mMoviePosterMap;      // Used to hold the posters downloaded in memory so they do not need to be continually downloaded each time the view is loaded.
-    Map<Long, FetchPosterTask> mTasks;      // Holds all tasks in progress, preventing duplicate tasks from running in background
+    Map<Long, Bitmap> mMoviePosterMap;              // Used to hold the posters downloaded in memory so they do not need to be continually downloaded each time the view is loaded.
+    Map<Long, FetchPosterTask> mDownloadTasks;      // Holds all download tasks in progress, preventing duplicate tasks from running in background
+    Map<Long, LoadImageTask> mLoadTasks;            // Holds all image loading tasks in progress, preventing duplicate tasks from running in background
 
 
     /**
@@ -86,9 +77,9 @@ public class MoviePosterAdapter extends CursorAdapter {
 
     // Pre-maturely any tasks that are in working the the background to allow for smooth UI
     public void cancelTasks() {
-        if (mTasks != null) {
-            for (long movieId : mTasks.keySet()) {
-                mTasks.get(movieId).cancel(true);
+        if (mDownloadTasks != null) {
+            for (long movieId : mDownloadTasks.keySet()) {
+                mDownloadTasks.get(movieId).cancel(true);
             }
         }
     }
@@ -99,37 +90,52 @@ public class MoviePosterAdapter extends CursorAdapter {
             return;
         }
         // Variables to be passed to the FetchPosterTask
-        int cursorPosition = cursor.getPosition();
-        int cursorSize = cursor.getCount();
-        String posterPath = cursor.getString(MainActivityFragment.COL_POSTER);
-        long movieId = cursor.getLong(MainActivityFragment.COL_MOVIE_ID);
+        final int cursorPosition = cursor.getPosition();
+        final int cursorSize = cursor.getCount();
+        final String posterPath = cursor.getString(MainActivityFragment.COL_POSTER);
+        final long movieId = cursor.getLong(MainActivityFragment.COL_MOVIE_ID);
 
-        ViewHolder viewHolder = (ViewHolder) view.getTag();
-        ImageView imageView = viewHolder.posterView;
+        final ViewHolder viewHolder = (ViewHolder) view.getTag();
+        final ImageView imageView = viewHolder.posterView;
 
         if (mMoviePosterMap.get(movieId) == null) {
             // Load the image from disk if it exists
-            Bitmap posterImage = loadPoster(movieId);
-            if (posterImage != null) {
-                mMoviePosterMap.put(movieId, posterImage);
-            } else {
-                // Download the poster if it does not exist in the map
-                FetchPosterTask fetchPosterTask = new FetchPosterTask();
-                Object[] params = new Object[] {posterPath, movieId, cursorPosition, cursorSize, viewHolder, fetchPosterTask};
+            Object[] loadParams = new Object[] {movieId, ImageContract.POSTER_TYPE};
+            LoadImageTask loadImageTask = new LoadImageTask(mContext, new LoadImageResponse() {
+                @Override
+                public void processFinished(Bitmap loadedBitmap) {
+                    if (loadedBitmap != null) {
+                        // If bitmap is loaded, add image to memory and set the ImageView
+                        mMoviePosterMap.put(movieId, loadedBitmap);
+                        notifyDataSetChanged();
+                    } else {
+                        Log.v(LOG_TAG, "Poster not found on disk, downloading poster");
+                        // Download the poster if it does not exist in the map
+                        FetchPosterTask fetchPosterTask = new FetchPosterTask();
+                        Object[] params = new Object[] {posterPath, movieId, cursorPosition, cursorSize, viewHolder, fetchPosterTask};
 
-                if (mTasks == null) {
-                    // Create a new HashMap to hold all tasks that are running
-                    mTasks = new HashMap<>();
-                }
+                        if (mDownloadTasks == null) {
+                            // Create a new HashMap to hold all tasks that are running
+                            mDownloadTasks = new HashMap<>();
+                        }
 
-                if (!mTasks.keySet().contains(movieId)) {
-                    // Only allow the AsyncTask to run if the same task isn't already running to prevent
-                    // duplicate threads
-                    mTasks.put(movieId, fetchPosterTask);
-                    fetchPosterTask.execute(params);
+                        if (!mDownloadTasks.keySet().contains(movieId)) {
+                            // Only allow the AsyncTask to run if the same task isn't already running to prevent
+                            // duplicate threads
+                            mDownloadTasks.put(movieId, fetchPosterTask);
+                            fetchPosterTask.execute(params);
+                        }
+                    }
+                    mLoadTasks.remove(movieId);
                 }
+            });
+            if (mLoadTasks == null) {
+                mLoadTasks = new HashMap<>();
             }
-
+            if (!mLoadTasks.keySet().contains(movieId)) {
+                mLoadTasks.put(movieId, loadImageTask);
+                loadImageTask.execute(loadParams);
+            }
         } else {
             // If image already exists in HashMap, then set image
             imageView.setImageBitmap(mMoviePosterMap.get(movieId));
@@ -150,43 +156,48 @@ public class MoviePosterAdapter extends CursorAdapter {
         }
     }
 
-    /**
-     * Loads poster image from disk if it exists
-     * @param movieId movie poster to be loaded
-     * @return Bitmap image of the movie's poster
-     */
-    private Bitmap loadPoster(Long movieId) {
-        ContextWrapper contextWrapper = new ContextWrapper(mContext);
-        File directory = contextWrapper.getDir(POSTER_DIRECTORY, Context.MODE_PRIVATE);
-
-        if (!directory.exists()) {
-            // No poster to return if directory does not exist
-            return null;
-        }
-        File posterBitmapFile = new File(directory, movieId + PNG_FILE_TYPE);
-
-        Bitmap posterBitmap = null;
-        FileInputStream inStream = null;
-        try {
-            // Create inputstream of the file and decode to a bitmap
-            inStream = new FileInputStream(posterBitmapFile);
-            posterBitmap = BitmapFactory.decodeStream(inStream);
-            if (posterBitmap == null) {
-                // No poster at the file location
-                return null;
-            }
-        } catch (FileNotFoundException e) {
-            Log.v(LOG_TAG, "Poster image not found", e);
-            return null;
-        }
-        return posterBitmap;
-    }
+//    /**
+//     * Loads poster image from disk if it exists
+//     * @param movieId movie poster to be loaded
+//     * @return Bitmap image of the movie's poster
+//     */
+//    private Bitmap loadPoster(long movieId) {
+//        ContextWrapper contextWrapper = new ContextWrapper(mContext);
+//        File directory = contextWrapper.getDir(ImageContract.POSTER_DIRECTORY, Context.MODE_PRIVATE);
+//
+//        if (!directory.exists()) {
+//            // No poster to return if directory does not exist
+//            return null;
+//        }
+//        File posterBitmapFile = new File(directory, movieId + PNG_FILE_TYPE);
+//
+//        if (!posterBitmapFile.exists()) {
+//            Log.v(LOG_TAG, posterBitmapFile.toString());
+//            return null;
+//        }
+//
+//        Bitmap posterBitmap = null;
+//        FileInputStream inStream = null;
+//        try {
+//            // Create inputstream of the file and decode to a bitmap
+//            inStream = new FileInputStream(posterBitmapFile);
+//            posterBitmap = BitmapFactory.decodeStream(inStream);
+//            if (posterBitmap == null) {
+//                // No poster at the file location
+//                return null;
+//            }
+//        } catch (FileNotFoundException e) {
+//            Log.v(LOG_TAG, "Poster image not found");
+//            return null;
+//        }
+//        return posterBitmap;
+//    }
 
     /**
      * AsyncTask for downloading poster images in background and loading them into the ImageView
      * being inflated into the GridView
      */
-    private class FetchPosterTask extends AsyncTask<Object, Void, Void> {
+    private class FetchPosterTask extends AsyncTask<Object, Void, Bitmap> {
         ViewHolder viewHolder;
         int position;
         int size;
@@ -194,7 +205,7 @@ public class MoviePosterAdapter extends CursorAdapter {
         FetchPosterTask fetchPosterTask;
 
         @Override
-        protected Void doInBackground(Object... params) {
+        protected Bitmap doInBackground(Object... params) {
             // Retrieve the variables passed
             String posterPath = (String) params[0];         // Path of the poster
             this.movieId = (Long) params[1];                // movieId
@@ -230,27 +241,6 @@ public class MoviePosterAdapter extends CursorAdapter {
                 bitmapStream.close();
                 mMoviePosterMap.put(movieId, poster);
 
-                // Update the UI
-                notifyDataSetChanged();
-
-                // Write file to directory so it doesn't need to be downloaded every time the
-                // activity is killed
-                ContextWrapper contextWrapper = new ContextWrapper(mContext);
-                File directory = contextWrapper.getDir(POSTER_DIRECTORY, Context.MODE_PRIVATE);
-                if (!directory.exists()) {
-                    directory.mkdir();
-                }
-                File posterFilePath = new File(directory, movieId + PNG_FILE_TYPE);
-                FileOutputStream outStream = null;
-
-                try {
-                    outStream = new FileOutputStream(posterFilePath);
-                    poster.compress(Bitmap.CompressFormat.PNG, 100, outStream);
-                    outStream.close();
-                } catch (Exception e) {
-                    Log.d(LOG_TAG, "Error saving image", e);
-                    e.printStackTrace();
-                }
             } catch (MalformedURLException e) {
                 // Error if URL is incorrect
                 Log.d(LOG_TAG, "Error ", e);
@@ -264,13 +254,22 @@ public class MoviePosterAdapter extends CursorAdapter {
                     posterConnection.disconnect();
                 }
             }
-            return null;
+            return poster;
         }
 
         @Override
-        protected void onPostExecute(Void param) {
-            // Remove the task from mTasks so that other tasks can be loaded
-            mTasks.remove(movieId);
+        protected void onPostExecute(Bitmap posterBitmap) {
+            // Update UI
+            notifyDataSetChanged();
+
+            // Remove the task from mDownloadTasks so that other tasks can be loaded
+            mDownloadTasks.remove(movieId);
+
+            // Save file to directory so it doesn't need to be downloaded every time the
+            // activity is killed
+            Object[] saveParams = new Object[] {movieId, posterBitmap, ImageContract.POSTER_TYPE};
+            SaveImageTask saveImageTask = new SaveImageTask(mContext);
+            saveImageTask.execute(saveParams);
         }
     }
 }

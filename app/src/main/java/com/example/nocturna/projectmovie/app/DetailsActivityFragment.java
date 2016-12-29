@@ -4,8 +4,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+import android.graphics.*;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v4.app.Fragment;
@@ -26,6 +25,10 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import com.example.nocturna.projectmovie.app.data.MovieContract;
+import com.example.nocturna.projectmovie.app.disk.ImageContract;
+import com.example.nocturna.projectmovie.app.disk.LoadImageResponse;
+import com.example.nocturna.projectmovie.app.disk.LoadImageTask;
+import com.example.nocturna.projectmovie.app.disk.SaveImageTask;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -46,13 +49,15 @@ import java.util.Map;
  */
 public class DetailsActivityFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
     // Member variables
-    Uri mMovieUri;
-    Context mContext;
+    Uri mMovieUri;                  // URI for movie
+    Context mContext;               // Global interface passed from constructor
     long mMovieId;
     ReviewAdapter mReviewAdapter;
-    float mPixels;
-    float LAYOUT_MARGIN;
-    float SEPARATION_MARGIN;
+    float mPixels;                  // Set equal to 1 dip
+    float LAYOUT_MARGIN;            // Retrieved from @dimen/layout_margin to set margins dynamically
+    float SEPARATION_MARGIN;        // Retrieved from @dimen/separation_margin to set margins dynamically
+    Bitmap mBackdropBitmap;         // Holds backdrop image to save to disk
+    Bitmap mTrailerBitmap;          // Holds trailer image to save to disk
 
     // Constants
     String LOG_TAG = DetailsActivityFragment.class.getSimpleName();
@@ -60,6 +65,8 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
     final String API_PARAM = "api_key";
     final String BASE_URI = "http://api.themoviedb.org/3/movie";
     private static final int DETAILS_LOADER = 1;
+    final String BACKDROP_PATH = "backdrops";
+    final String TRAILER_THUMB_PATH = "trailer_thumbs";
 
 
     // Column Projection
@@ -167,6 +174,17 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
                     );
 
                     favoriteIcon.setImageDrawable(ContextCompat.getDrawable(mContext, R.drawable.star_on));
+                     if (mBackdropBitmap != null) {
+                         Object[] saveParams = new Object[] {mMovieId, mBackdropBitmap, ImageContract.BACKDROP_TYPE};
+                         new SaveImageTask(mContext).execute(saveParams);
+                     }
+
+                    if (mTrailerBitmap != null) {
+                        Object[] saveParams = new Object[] {mMovieId, mTrailerBitmap, ImageContract.TRAILER_TYPE};
+                        new SaveImageTask(mContext).execute(saveParams);
+                    }
+
+
                 } else {
                     ContentValues values = new ContentValues();
                     values.put(MovieContract.MovieEntry.COLUMN_FAVORITE, 0);
@@ -246,22 +264,54 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
         }
 
         // Movie variables to be loaded into the view
-        long movieId = cursor.getLong(COL_MOVIE_ID);
-        String title = cursor.getString(COL_TITLE);
-        String overview = cursor.getString(COL_OVERVIEW);
-        String rating = Utility.formatRating(cursor.getDouble(COL_RATING));
-        long releaseDate = cursor.getLong(COL_RELEASE_DATE);
-        String posterPath = cursor.getString(COL_POSTER);
-        String backdropPath = cursor.getString(COL_BACKDROP);
-        String genres = cursor.getString(COL_GENRE);
-        boolean favorite;
+        final long movieId = cursor.getLong(COL_MOVIE_ID);
+        final String title = cursor.getString(COL_TITLE);
+        final String overview = cursor.getString(COL_OVERVIEW);
+        final String rating = Utility.formatRating(cursor.getDouble(COL_RATING));
+        final String releaseDate = Utility.longToDate(cursor.getLong(COL_RELEASE_DATE));
+        final String posterPath = cursor.getString(COL_POSTER);
+        final String backdropPath = cursor.getString(COL_BACKDROP);
+        StringBuffer genreBuffer = new StringBuffer(cursor.getString(COL_GENRE));
 
         // Download trailer data if it doesn't not exist in database
         if (cursor.getString(COL_TRAILER) != null) {
-            String trailerPath = cursor.getString(COL_TRAILER);
-            FetchTrailerThumbnailTask fetchTrailerThumbnailTask = new FetchTrailerThumbnailTask();
-            fetchTrailerThumbnailTask.execute(trailerPath);
+            final String trailerPath = cursor.getString(COL_TRAILER);
+
+
+            new LoadImageTask(mContext, new LoadImageResponse() {
+                @Override
+                public void processFinished(Bitmap loadedBitmap) {
+                    if (loadedBitmap != null) {
+                        // Padding is set dynamically so that it doesn't create empty space at the bottom of
+                        // the page if there is nothing to scroll to
+                        trailerLayout.setPadding(
+                                Math.round(LAYOUT_MARGIN),
+                                Math.round(SEPARATION_MARGIN),
+                                Math.round(LAYOUT_MARGIN),
+                                Math.round(SEPARATION_MARGIN)
+                        );
+                        trailerImage.setImageBitmap(loadedBitmap);
+                        // Set an Intent to fire a weblink to the YouTube trailer on click
+                        trailerImage.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                // Implicit Intent will either fire YouTube app if available or open
+                                // the URL in a web browser
+                                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(trailerPath));
+                                startActivity(intent);
+                            }
+                        });
+                        trailerText.setText(mContext.getString(R.string.trailers));
+                    } else {
+                        // If trailer thumbnail does not exist on drive, download from TheMovieDB
+                        FetchTrailerThumbnailTask fetchTrailerThumbnailTask = new FetchTrailerThumbnailTask();
+                        fetchTrailerThumbnailTask.execute(trailerPath);
+                    }
+                }
+            }).execute(movieId, ImageContract.TRAILER_TYPE);
         } else {
+            // Trailer path doesn't exist, retrieve trailer path from TheMovieDB and download
+            // trailer thumbnail from YouTube
             FetchTrailerTask fetchTrailerTask = new FetchTrailerTask();
             fetchTrailerTask.execute(movieId);
         }
@@ -275,22 +325,44 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
 
         // Get all genres of the movie
         while (cursor.moveToNext()) {
-            genres += ", " + cursor.getString(COL_GENRE);
+            genreBuffer.append(", " + cursor.getString(COL_GENRE));
         }
 
+        final String genres = genreBuffer.toString();
 
-        // Convert release date into String format
-        String releaseDateStr = Utility.longToDate(releaseDate);
+        // Attempt to load image from disk if it exists
+        new LoadImageTask(mContext, new LoadImageResponse() {
+            @Override
+            public void processFinished(Bitmap loadedBitmap) {
+                if (loadedBitmap != null) {
+                    // Set the ImageView
+                    backdropImage.setImageBitmap(loadedBitmap);
 
-        // Download movie backdrop
-        String[] params = new String[] {posterPath, backdropPath, title, overview, rating, releaseDateStr, genres};
-        FetchImageTask fetchImageTask = new FetchImageTask();
-        fetchImageTask.execute(params);
+                    // Set the background of the subtitle text to the average color of backdrop
+                    int backgroundColor = Utility.getDominantColor(loadedBitmap);
+                    backgroundLayout.setBackgroundColor(backgroundColor);
+
+                    // Set the text of the TextViews after poster has been loaded to prevent awkward
+                    // positioning of text while images load
+                    titleText.setText(title);
+                    overviewText.setText(overview);
+                    ratingText.setText(rating);
+                    releaseText.setText(releaseDate);
+                    genreText.setText(genres);
+                } else {
+                    // Image does not exist on disk, download from TheMovieDb
+                    String[] params = new String[] {posterPath, backdropPath, title, overview, rating, releaseDate, genres};
+                    FetchImageTask fetchImageTask = new FetchImageTask();
+                    fetchImageTask.execute(params);
+                }
+
+            }
+        }).execute(movieId, ImageContract.BACKDROP_TYPE);
 
         // Download movie reviews
-        Long[] params2 = new Long[] {movieId};
+        Long[] reviewParams = new Long[] {movieId};
         FetchReviewTask fetchReviewTask = new FetchReviewTask();
-        fetchReviewTask.execute(params2);
+        fetchReviewTask.execute(reviewParams);
     }
 
     @Override
@@ -356,6 +428,7 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
         @Override
         protected void onPostExecute(Bitmap[] images) {
             if (images[1] != null) {
+                mBackdropBitmap = images[1];
                 backdropImage.setImageBitmap(images[1]);
 
                 // Set the background of the subtitle text to the average color of backdrop
@@ -417,6 +490,7 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
                     // Nothing read, so unable to continue
                     return null;
                 }
+                Log.v(LOG_TAG, "Trailer JSON String length :" + buffer.length());
                 trailerJsonString = buffer.toString();
 
             } catch (MalformedURLException e) {
@@ -428,13 +502,16 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
                     urlConnection.disconnect();
                 }
             }
-            try {
-                getTrailerFromString(movieId, trailerJsonString);
-            } catch (JSONException e) {
-                Log.d(LOG_TAG, "JSON Exception", e);
-                e.printStackTrace();
+            if (trailerJsonString != null && trailerJsonString.length() > 0) {
+                try {
+                    getTrailerFromString(movieId, trailerJsonString);
+                } catch (JSONException e) {
+                    Log.d(LOG_TAG, "JSON Exception", e);
+                    e.printStackTrace();
+                }
             }
 
+            // Retrieve trailer path downloaded from JSON data
             Cursor cursor = mContext.getContentResolver().query(
                     MovieContract.LinkEntry.buildGenresUriFromMovieId(movieId),
                     DETAILS_COLUMNS,
@@ -495,8 +572,10 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
 
         @Override
         protected void onPostExecute(String trailerPath) {
-            FetchTrailerThumbnailTask fetchTrailerThumbnailTask = new FetchTrailerThumbnailTask();
-            fetchTrailerThumbnailTask.execute(trailerPath);
+            if (trailerPath != null && trailerPath.length() > 0) {
+                FetchTrailerThumbnailTask fetchTrailerThumbnailTask = new FetchTrailerThumbnailTask();
+                fetchTrailerThumbnailTask.execute(trailerPath);
+            }
         }
     }
 
@@ -554,9 +633,10 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
         }
 
         @Override
-        protected void onPostExecute(Bitmap bitmap) {
+        protected void onPostExecute(Bitmap trailerBitmap) {
             // Set the thumbnail for the trailer
-            if (bitmap != null) {
+            if (trailerBitmap != null) {
+                mTrailerBitmap = trailerBitmap;
                 // Padding is set dynamically so that it doesn't create empty space at the bottom of
                 // the page if there is nothing to scroll to
                 trailerLayout.setPadding(
@@ -565,7 +645,7 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
                         Math.round(LAYOUT_MARGIN),
                         Math.round(SEPARATION_MARGIN)
                 );
-                trailerImage.setImageBitmap(bitmap);
+                trailerImage.setImageBitmap(trailerBitmap);
                 // Set an Intent to fire a weblink to the YouTube trailer on click
                 trailerImage.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -688,7 +768,7 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
 
         @Override
         protected void onPostExecute(Map<String, String> reviewMap) {
-            if (!reviewMap.keySet().isEmpty()) {
+            if (reviewMap != null && !reviewMap.keySet().isEmpty()) {
                 // If there are reviews, set the adapter. The layout margins are set programmatically
                 // because if there are no reviews, the layout will not contain margins that allow
                 // the ScrollView to scroll
