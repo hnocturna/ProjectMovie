@@ -69,4 +69,5 @@ public class LoadImageTask extends AsyncTask<Object, Void, Bitmap> {
         // Pass the loaded bitmap to the callback interface
         delegate.processFinished(bitmap);
     }
+
 }

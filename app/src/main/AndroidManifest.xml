@@ -45,6 +45,9 @@
             android:exported="false"
             android:enabled="true"
             />
+
+        <service android:name=".service.MovieService"/>
+        <receiver android:name=".service.MovieService$AlarmReceiver" android:enabled="true"/>
     </application>
 
 </manifest>

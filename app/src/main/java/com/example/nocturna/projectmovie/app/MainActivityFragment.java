@@ -1,5 +1,7 @@
 package com.example.nocturna.projectmovie.app;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -28,6 +30,7 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 
 import com.example.nocturna.projectmovie.app.data.MovieContract;
+import com.example.nocturna.projectmovie.app.service.MovieService;
 
 /**
  * A placeholder fragment containing a simple view.
@@ -240,17 +243,28 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
                 // Generate the URI for the row pointing to the movie
                 Uri movieUri = MovieContract.MovieEntry.buildMovieUriFromId(movieId);
 
-                // Start an intent with the URI attached to it to launch the DetailsActivity
-                Intent intent = new Intent(getActivity(), DetailsActivity.class);
-                intent.setData(movieUri);
-                startActivity(intent);
+                // Send the movieUri to the MainActivity so it can launch the appropriate action
+                // depending on whether the app is in TwoPane mode
+                ((Callback) getActivity()).onItemSelected(movieUri);
             }
         });
-        FetchMoviesTask fetchMoviesTask = new FetchMoviesTask(getActivity(), mMoviePosterAdapter);
-        fetchMoviesTask.execute();
-
-
+        refreshMovies();
         return rootView;
+    }
+
+    void refreshMovies() {
+        // Create a pendingIntent to wrap the Intent to be sent
+        Intent alarmIntent = new Intent(getActivity(), MovieService.AlarmReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(getActivity(), 0, alarmIntent, PendingIntent.FLAG_ONE_SHOT);
+
+        // Set the alarm to fire as an inexact alarm every half-day
+        AlarmManager alarmManager = (AlarmManager) getActivity().getSystemService(Context.ALARM_SERVICE);
+        alarmManager.setInexactRepeating(
+                AlarmManager.RTC_WAKEUP,
+                System.currentTimeMillis(),
+                AlarmManager.INTERVAL_HALF_DAY,
+                pendingIntent
+        );
     }
 
     /**
@@ -315,4 +329,7 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
         mMoviePosterAdapter.swapCursor(null);
     }
 
+    public interface Callback {
+        void onItemSelected(Uri movieUri);
+    }
 }

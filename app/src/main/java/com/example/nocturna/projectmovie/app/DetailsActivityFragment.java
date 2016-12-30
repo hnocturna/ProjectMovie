@@ -65,8 +65,7 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
     final String API_PARAM = "api_key";
     final String BASE_URI = "http://api.themoviedb.org/3/movie";
     private static final int DETAILS_LOADER = 1;
-    final String BACKDROP_PATH = "backdrops";
-    final String TRAILER_THUMB_PATH = "trailer_thumbs";
+    final static String DETAILS_URI = "detailUri";
 
 
     // Column Projection
@@ -123,15 +122,19 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_details, container, false);
-        // Retrieve URI from Intent
-        Intent intent = getActivity().getIntent();
+        // Retrieve URI
+        if (getArguments() != null) {
+            mMovieUri = getArguments().getParcelable(DETAILS_URI);
+        }
 
         // Initialize member variables
-        mMovieUri = intent.getData();
-        mMovieId = MovieContract.MovieEntry.getMovieIdFromUri(mMovieUri);
+        if (mMovieUri != null) {
+            mMovieId = MovieContract.MovieEntry.getMovieIdFromUri(mMovieUri);
+        }
         mContext = getActivity();
 
-        // Initialize views
+        // Initialize views as member variables to prevent waste of resources from constantly
+        // traversing the view hierarchy in onLoadFinished
         titleText = (TextView) rootView.findViewById(R.id.detail_title_text);
         overviewText = (TextView) rootView.findViewById(R.id.detail_overview_text);
         ratingText = (TextView) rootView.findViewById(R.id.detail_rating_text);
@@ -198,6 +201,8 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
 
                     favoriteIcon.setImageDrawable(ContextCompat.getDrawable(mContext, R.drawable.star_off));
                 }
+
+                cursor.close();
             }
         });
 
@@ -271,7 +276,7 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
         final String releaseDate = Utility.longToDate(cursor.getLong(COL_RELEASE_DATE));
         final String posterPath = cursor.getString(COL_POSTER);
         final String backdropPath = cursor.getString(COL_BACKDROP);
-        StringBuffer genreBuffer = new StringBuffer(cursor.getString(COL_GENRE));
+        StringBuilder genreBuilder = new StringBuilder(cursor.getString(COL_GENRE));
 
         // Download trailer data if it doesn't not exist in database
         if (cursor.getString(COL_TRAILER) != null) {
@@ -325,10 +330,10 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
 
         // Get all genres of the movie
         while (cursor.moveToNext()) {
-            genreBuffer.append(", " + cursor.getString(COL_GENRE));
+            genreBuilder.append(", " + cursor.getString(COL_GENRE));
         }
 
-        final String genres = genreBuffer.toString();
+        final String genres = genreBuilder.toString();
 
         // Attempt to load image from disk if it exists
         new LoadImageTask(mContext, new LoadImageResponse() {
@@ -522,6 +527,7 @@ public class DetailsActivityFragment extends Fragment implements LoaderManager.L
 
             cursor.moveToFirst();
             String trailerPath = cursor.getString(COL_TRAILER);
+            cursor.close();
 
             return trailerPath;
         }

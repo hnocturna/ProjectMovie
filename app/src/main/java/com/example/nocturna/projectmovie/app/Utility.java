@@ -28,7 +28,7 @@ public class Utility {
      * @return resized movieArray without null values
      */
     public static Movie[] cleanMovieArray(Movie[] movieArray) {
-        List<Movie> list = new ArrayList<Movie>(Arrays.asList(movieArray));
+        List<Movie> list = new ArrayList<>(Arrays.asList(movieArray));
         list.removeAll(Collections.singleton(null));
         return list.toArray(new Movie[list.size()]);
     }

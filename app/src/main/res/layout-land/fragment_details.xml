@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/content_details"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="com.example.nocturna.projectmovie.app.DetailsActivityFragment"
     tools:showIn="@layout/activity_details"
-    android:background="@color/offBlack"
-    >
+    android:background="@color/offBlack">
 
     <ScrollView
         android:layout_width="match_parent"
@@ -18,20 +16,21 @@
         >
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:descendantFocusability="blocksDescendants">
 
             <RelativeLayout
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content">
 
                 <ImageView
                     android:adjustViewBounds="true"
                     android:id="@+id/detail_backdrop_image"
-                    android:layout_width="match_parent"
+                    android:layout_width="700dp"
                     android:layout_height="wrap_content"
+                    android:layout_centerHorizontal="true"
                     android:scaleType="fitXY"
                     />
 
@@ -46,11 +45,12 @@
 
                 <TextView
                     android:id="@+id/detail_title_text"
-                    android:layout_width="wrap_content"
+                    android:layout_width="700dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginLeft="@dimen/layout_margin"
-                    android:layout_marginBottom="@dimen/separation_margin"
+                    android:paddingLeft="@dimen/layout_margin"
+                    android:paddingBottom="@dimen/separation_margin"
                     android:layout_alignParentBottom="true"
+                    android:layout_centerHorizontal="true"
                     style="@style/detail_title_text"
                     />
 
@@ -58,7 +58,8 @@
 
             <LinearLayout
                 android:id="@+id/detail_subtitle_background"
-                android:layout_width="match_parent"
+                android:layout_gravity="center_horizontal"
+                android:layout_width="700dp"
                 android:layout_height="67dp"
                 android:paddingLeft="@dimen/layout_margin"
                 android:paddingRight="@dimen/layout_margin"
@@ -86,7 +87,7 @@
 
                 <TextView
                     android:id="@+id/detail_genre_text"
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     style="@style/detail_genre_text"/>
 
@@ -94,10 +95,11 @@
 
             <TextView
                 android:id="@+id/detail_overview_text"
-                android:layout_width="match_parent"
+                android:layout_gravity="center_horizontal"
+                android:layout_width="700dp"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="@dimen/layout_margin"
-                android:layout_marginRight="@dimen/layout_margin"
+                android:paddingLeft="@dimen/layout_margin"
+                android:paddingRight="@dimen/layout_margin"
                 android:layout_marginBottom="@dimen/layout_margin"
                 android:layout_marginTop="@dimen/layout_margin"
                 style="@style/detail_overview_text"/>
@@ -105,7 +107,8 @@
 
             <LinearLayout
                 android:id="@+id/detail_trailer_layout"
-                android:layout_width="match_parent"
+                android:layout_gravity="center_horizontal"
+                android:layout_width="700dp"
                 android:layout_height="wrap_content"
                 >
 
@@ -126,8 +129,9 @@
 
             <TextView
                 android:id="@+id/detail_review_title"
-                android:layout_width="match_parent"
+                android:layout_width="700dp"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center"
                 android:gravity="center"
                 android:layout_marginTop="@dimen/separation_margin"
                 android:layout_marginBottom="@dimen/separation_margin"
@@ -135,8 +139,9 @@
 
             <ListView
                 android:id="@+id/detail_review_list"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_width="700dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal">
             </ListView>
 
         </LinearLayout>

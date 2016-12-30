@@ -16,6 +16,16 @@ public class DetailsActivity extends AppCompatActivity {
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                         | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+
+        Bundle args = new Bundle();
+        args.putParcelable(DetailsActivityFragment.DETAILS_URI, getIntent().getData());
+
+        DetailsActivityFragment detailfragment = new DetailsActivityFragment();
+        detailfragment.setArguments(args);
+
+        getSupportFragmentManager().beginTransaction()
+                .add(R.id.movie_detail_container, detailfragment)
+                .commit();
     }
 
 }
