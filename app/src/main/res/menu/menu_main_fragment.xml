@@ -1,11 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/lib/com.example.nocturna.projectmovie">
+    xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/action_sort"
         android:title="@string/action_sort"
         app:showAsAction="ifRoom"
         android:orderInCategory="0"
         android:icon="@drawable/ic_sort_white_24dp"
+        />
+    <item
+        android:id="@+id/action_favorites"
+        android:title="@string/action_favorites"
+        android:icon="@drawable/star_on"
+        app:showAsAction="always"
         />
 </menu>

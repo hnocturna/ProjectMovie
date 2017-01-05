@@ -54,7 +54,8 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
             MovieContract.MovieEntry.COLUMN_MOVIE_ID,
             MovieContract.MovieEntry.COLUMN_POSTER,
             MovieContract.MovieEntry.COLUMN_RATING,
-            MovieContract.MovieEntry.COLUMN_POPULARITY
+            MovieContract.MovieEntry.COLUMN_POPULARITY,
+            MovieContract.MovieEntry.COLUMN_FAVORITE
     };
 
     // Column indices. Tied to MOVIE_COLUMNS
@@ -63,6 +64,7 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
     static final int COL_POSTER = 2;
     static final int COL_RATING = 3;
     static final int COL_POPULARITY = 4;
+    static final int COL_FAVORITE = 5;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -171,6 +173,18 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
             });
 
         }
+        if (id == R.id.action_favorites) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+            SharedPreferences.Editor editor = prefs.edit();
+
+            if (prefs.getBoolean(getString(R.string.action_favorites), true)) {
+                editor.putBoolean(getString(R.string.action_favorites), false);
+            } else {
+                editor.putBoolean(getString(R.string.action_favorites), true);
+            }
+            editor.apply();
+            onSortModeChanged();
+        }
 
         return super.onOptionsItemSelected(item);
     }
@@ -203,12 +217,20 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
             throw new UnsupportedOperationException("Unknown sort method: " + sortMode);
         }
 
+        boolean favoritesOnly = prefs.getBoolean(getString(R.string.action_favorites), false);
+        String selection = null;
+        String[] selectionArgs = null;
+        if (favoritesOnly) {
+            selection = MovieContract.MovieEntry.COLUMN_FAVORITE + " = ?";
+            selectionArgs = new String[] {"1"};
+        }
+
         // Get new cursor by querying database
         Cursor cursor = getActivity().getContentResolver().query(
                 moviesUri,
                 MOVIE_COLUMNS,
-                null,
-                null,
+                selection,
+                selectionArgs,
                 sortOrder
         );
 
@@ -313,7 +335,7 @@ public class MainActivityFragment extends Fragment implements LoaderManager.Load
      */
     @Override
     public void onLoadFinished(Loader loader, Cursor cursor) {
-        mMoviePosterAdapter.swapCursor(cursor);
+        onSortModeChanged();
         if (mCursorPosition != GridView.INVALID_POSITION) {
             mGridView.smoothScrollToPosition(mCursorPosition);
         }
